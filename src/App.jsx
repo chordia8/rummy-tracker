@@ -20,7 +20,7 @@ const RULES = [
   { title: "Round 7", text: "Final round — no discard when going out. You must use all cards in your hand." },
 ];
 
-const DEFAULT_NAMES = ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5"];
+const DEFAULT_NAMES = ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5", "Player 6", "Player 7", "Player 8"];
 const STORAGE_KEY = "liverpool-rummy-state";
 
 const defaultState = () => ({
@@ -43,16 +43,17 @@ function saveState(state) {
 
 export default function LiverpoolRummy() {
   const [phase, setPhase] = useState(() => loadState().phase);
+  const [playerCount, setPlayerCount] = useState(() => loadState().playerCount || 5);
   const [names, setNames] = useState(() => loadState().names);
   const [scores, setScores] = useState(() => loadState().scores);
   const [currentRound, setCurrentRound] = useState(() => loadState().currentRound);
-  const [inputs, setInputs] = useState(Array(5).fill(""));
+  const [inputs, setInputs] = useState(Array(8).fill(""));
   const [showContract, setShowContract] = useState(true);
   const [showRules, setShowRules] = useState(false);
   const [showRestart, setShowRestart] = useState(false);
 
   useEffect(() => {
-    saveState({ phase, names, scores, currentRound });
+    saveState({ phase, playerCount, names, scores, currentRound });
   }, [phase, names, scores, currentRound]);
 
   const totalScore = (i) => scores[i].reduce((a, b) => a + b, 0);
@@ -61,7 +62,12 @@ export default function LiverpoolRummy() {
     const n = [...names]; n[i] = val; setNames(n);
   };
 
-  const handleStart = () => { setPhase("game"); setShowContract(true); };
+  const handleStart = () => {
+    setNames(DEFAULT_NAMES.slice(0, playerCount).map((n, i) => names[i] || n));
+    setScores(Array(playerCount).fill(null).map(() => []));
+    setPhase("game");
+    setShowContract(true);
+  };
 
   const handleInputChange = (i, val) => {
     const arr = [...inputs]; arr[i] = val; setInputs(arr);
@@ -73,7 +79,7 @@ export default function LiverpoolRummy() {
       return [...s, isNaN(val) ? 0 : val];
     });
     setScores(newScores);
-    setInputs(Array(5).fill(""));
+    setInputs(Array(8).fill(""));
     if (currentRound + 1 >= CONTRACTS.length) {
       setPhase("end");
     } else {
@@ -88,7 +94,7 @@ export default function LiverpoolRummy() {
       setCurrentRound(CONTRACTS.length - 1);
       const newScores = scores.map(s => s.slice(0, -1));
       setScores(newScores);
-      setInputs(Array(5).fill(""));
+      setInputs(Array(8).fill(""));
       setShowContract(true);
       return;
     }
@@ -96,17 +102,16 @@ export default function LiverpoolRummy() {
     const newScores = scores.map(s => s.slice(0, -1));
     setScores(newScores);
     setCurrentRound(currentRound - 1);
-    setInputs(Array(5).fill(""));
+    setInputs(Array(8).fill(""));
     setShowContract(true);
   };
 
   const handleRestart = () => {
-    const fresh = defaultState();
-    setPhase(fresh.phase);
-    setNames(fresh.names);
-    setScores(fresh.scores);
-    setCurrentRound(fresh.currentRound);
-    setInputs(Array(5).fill(""));
+    setPhase("setup");
+    setNames(DEFAULT_NAMES.slice(0, 8));
+    setScores(Array(playerCount).fill(null).map(() => []));
+    setCurrentRound(0);
+    setInputs(Array(8).fill(""));
     setShowContract(true);
     setShowRules(false);
     setShowRestart(false);
@@ -206,11 +211,25 @@ export default function LiverpoolRummy() {
         {phase === "setup" && (
           <div>
             <div style={{ fontSize: 13, color: "#6b7a99", letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
+              Number of Players
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
+              {[2,3,4,5,6,7,8].map(n => (
+                <button key={n} onClick={() => setPlayerCount(n)} style={{
+                  flex: 1, padding: "12px 0", borderRadius: 8, fontSize: 16, fontWeight: "bold",
+                  fontFamily: "'Georgia', serif", cursor: "pointer",
+                  background: playerCount === n ? "linear-gradient(135deg, #c9a84c, #e8c96d)" : "#1a1f2e",
+                  color: playerCount === n ? "#0f1117" : "#6b7a99",
+                  border: playerCount === n ? "none" : "1px solid #2a3040",
+                }}>{n}</button>
+              ))}
+            </div>
+            <div style={{ fontSize: 13, color: "#6b7a99", letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>
               Enter Player Names
             </div>
-            {names.map((name, i) => (
+            {Array(playerCount).fill(null).map((_, i) => (
               <div key={i} style={{ marginBottom: 10 }}>
-                <input value={name} onChange={e => handleNameChange(i, e.target.value)}
+                <input value={names[i] || ""} onChange={e => handleNameChange(i, e.target.value)}
                   placeholder={`Player ${i + 1}`} style={{
                     width: "100%", background: "#1a1f2e", border: "1px solid #2a3040",
                     borderRadius: 8, color: "#e8dfc8", fontSize: 15, padding: "12px 14px",
