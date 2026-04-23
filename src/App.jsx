@@ -355,6 +355,20 @@ function RecipeView({ t, onBack }) {
     return init;
   });
   const intervalsRef = useRef({});
+  const audioUnlockedRef = useRef(false);
+
+  const unlockAudio = () => {
+    if (audioUnlockedRef.current) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+      audioUnlockedRef.current = true;
+    } catch (e) {}
+  };
 
   // Tick all running timers
   useEffect(() => {
@@ -371,6 +385,7 @@ function RecipeView({ t, onBack }) {
             next[id] = { ...ts, running: false, done: true, timeLeft: 0 };
             changed = true;
             playAlarm();
+            setTimeout(() => showToast(parseInt(id)), 0);
           }
         });
         return changed ? next : prev;
@@ -380,12 +395,24 @@ function RecipeView({ t, onBack }) {
   }, []);
 
   const handleTimerAction = (stepId) => {
+    unlockAudio();
     setTimerStates(prev => {
       const ts = prev[stepId];
       const step = r.steps.find(s => s.id === stepId);
       if (ts.done) return { ...prev, [stepId]: { timeLeft: step.duration, running: false, done: false } };
       return { ...prev, [stepId]: { ...ts, running: !ts.running } };
     });
+  };
+
+  const [toast, setToast] = useState(null); // { title, stepNum }
+  const toastTimerRef = useRef(null);
+
+  const showToast = (stepId) => {
+    const step = r.steps.find(s => s.id === stepId);
+    const stepNum = r.steps.indexOf(step);
+    setToast({ title: step.title, stepNum });
+    clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 5000);
   };
 
   const allExpanded = expandedSteps.size === r.steps.length;
@@ -403,6 +430,30 @@ function RecipeView({ t, onBack }) {
 
   return (
     <div style={{ minHeight: "100vh", background: t.bg, fontFamily: "'Lora', Georgia, serif", paddingBottom: "60px" }}>
+
+      {/* Toast notification */}
+      {toast && (
+        <div style={{
+          position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
+          zIndex: 999, animation: "toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+          pointerEvents: "none",
+        }}>
+          <div style={{
+            background: t.successBg, border: `2px solid ${t.successBorder}`,
+            borderRadius: "16px", padding: "14px 20px",
+            display: "flex", alignItems: "center", gap: "12px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
+            minWidth: "260px", maxWidth: "90vw",
+          }}>
+            <div style={{ fontSize: "28px" }}>✅</div>
+            <div>
+              <div style={{ fontSize: "11px", fontWeight: 700, color: t.successText, textTransform: "uppercase", letterSpacing: "0.08em" }}>Step {toast.stepNum} Complete</div>
+              <div style={{ fontSize: "15px", fontWeight: 700, color: t.successText, fontFamily: "'Playfair Display', Georgia, serif" }}>{toast.title}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ background: t.headerGrad, padding: "20px 24px 16px", textAlign: "center", position: "relative" }}>
         <button onClick={onBack} style={{ position: "absolute", left: 16, top: 20, background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "8px", color: "#fff", fontSize: "20px", cursor: "pointer", padding: "6px 12px" }}>←</button>
@@ -814,6 +865,7 @@ export default function App() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Lora:wght@400;600&display=swap');
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         * { box-sizing: border-box; }
         input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
       `}</style>
