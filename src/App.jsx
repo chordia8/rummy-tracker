@@ -4,80 +4,38 @@ import { useState, useEffect, useRef } from "react";
 
 const THEMES = {
   light: {
-    bg: "#f5ede0",
-    bgAlt: "#faf7f2",
-    bgCard: "#fffbf5",
-    border: "#e8ddd0",
-    borderAccent: "#c9955a",
-    text: "#3d2b1a",
-    textMuted: "#9a8570",
-    textBody: "#5c4a2a",
-    accent: "#c9955a",
-    accentDark: "#8b4513",
-    accentLight: "#e8b87a",
-    gold: "#c9a84c",
-    goldLight: "#e8c96d",
+    bg: "#f5ede0", bgAlt: "#faf7f2", bgCard: "#fffbf5", border: "#e8ddd0",
+    borderAccent: "#c9955a", text: "#3d2b1a", textMuted: "#9a8570", textBody: "#5c4a2a",
+    accent: "#c9955a", accentDark: "#8b4513", accentLight: "#e8b87a",
+    gold: "#c9a84c", goldLight: "#e8c96d",
     headerGrad: "linear-gradient(135deg, #8b4513 0%, #c9955a 50%, #e8b87a 100%)",
     cardShadow: "0 4px 20px rgba(180,120,60,0.12)",
-    tipBg: "#fef3e2",
-    tipBorder: "#f0d9b0",
-    tipText: "#7a5500",
-    successBg: "#d4edda",
-    successBorder: "#5a9e6f",
-    successText: "#2d6a4f",
-    inputBg: "#fff",
-    inputBorder: "#c9b99a",
-    rummyBg: "#f5ede0",
-    rummyCard: "#fffbf5",
-    rummyCardBorder: "#e8ddd0",
+    tipBg: "#fef3e2", tipBorder: "#f0d9b0", tipText: "#7a5500",
+    successBg: "#d4edda", successBorder: "#5a9e6f", successText: "#2d6a4f",
+    inputBg: "#fff", inputBorder: "#c9b99a",
+    rummyBg: "#f5ede0", rummyCard: "#fffbf5", rummyCardBorder: "#e8ddd0",
     rummyHeader: "linear-gradient(135deg, #3d2b1a 0%, #6b4c2a 100%)",
-    rummyHeaderText: "#f5ede0",
-    rummyMuted: "#9a8570",
-    rummyAccent: "#c9a84c",
-    rummyAccentLight: "#e8c96d",
-    rummyDanger: "#c0392b",
-    rummyTableBorder: "#e8ddd0",
-    rummyInputBg: "#faf7f2",
-    toggle: "#e8ddd0",
-    toggleIcon: "🌙",
+    rummyHeaderText: "#f5ede0", rummyMuted: "#9a8570",
+    rummyAccent: "#c9a84c", rummyAccentLight: "#e8c96d",
+    rummyDanger: "#c0392b", rummyTableBorder: "#e8ddd0", rummyInputBg: "#faf7f2",
+    toggle: "#e8ddd0", toggleIcon: "🌙",
   },
   dark: {
-    bg: "#0f1117",
-    bgAlt: "#1a1f2e",
-    bgCard: "#1a1f2e",
-    border: "#2a3040",
-    borderAccent: "#c9a84c",
-    text: "#e8dfc8",
-    textMuted: "#6b7a99",
-    textBody: "#8891a8",
-    accent: "#c9a84c",
-    accentDark: "#a07830",
-    accentLight: "#e8c96d",
-    gold: "#c9a84c",
-    goldLight: "#e8c96d",
+    bg: "#0f1117", bgAlt: "#1a1f2e", bgCard: "#1a1f2e", border: "#2a3040",
+    borderAccent: "#c9a84c", text: "#e8dfc8", textMuted: "#6b7a99", textBody: "#8891a8",
+    accent: "#c9a84c", accentDark: "#a07830", accentLight: "#e8c96d",
+    gold: "#c9a84c", goldLight: "#e8c96d",
     headerGrad: "linear-gradient(135deg, #1a1f2e 0%, #0f1117 100%)",
     cardShadow: "0 4px 20px rgba(0,0,0,0.4)",
-    tipBg: "#1e2535",
-    tipBorder: "#2a3040",
-    tipText: "#c9a84c",
-    successBg: "#1a2e1a",
-    successBorder: "#5a9e6f",
-    successText: "#7ecc94",
-    inputBg: "#0f1117",
-    inputBorder: "#2a3040",
-    rummyBg: "#0f1117",
-    rummyCard: "#1a1f2e",
-    rummyCardBorder: "#2a3040",
+    tipBg: "#1e2535", tipBorder: "#2a3040", tipText: "#c9a84c",
+    successBg: "#1a2e1a", successBorder: "#5a9e6f", successText: "#7ecc94",
+    inputBg: "#0f1117", inputBorder: "#2a3040",
+    rummyBg: "#0f1117", rummyCard: "#1a1f2e", rummyCardBorder: "#2a3040",
     rummyHeader: "linear-gradient(135deg, #1a1f2e 0%, #0f1117 100%)",
-    rummyHeaderText: "#e8dfc8",
-    rummyMuted: "#6b7a99",
-    rummyAccent: "#c9a84c",
-    rummyAccentLight: "#e8c96d",
-    rummyDanger: "#e87070",
-    rummyTableBorder: "#2a3040",
-    rummyInputBg: "#0f1117",
-    toggle: "#2a3040",
-    toggleIcon: "☀️",
+    rummyHeaderText: "#e8dfc8", rummyMuted: "#6b7a99",
+    rummyAccent: "#c9a84c", rummyAccentLight: "#e8c96d",
+    rummyDanger: "#e87070", rummyTableBorder: "#2a3040", rummyInputBg: "#0f1117",
+    toggle: "#2a3040", toggleIcon: "☀️",
   },
 };
 
@@ -88,6 +46,16 @@ const recipeData = {
   emoji: "🥔",
   subtitle: "with Cottage Cheese Sauce, Chickpeas & Feta",
   stats: [["⏱", "~30 min"], ["🍽", "2 servings"], ["💪", "~35g protein"]],
+  overview: [
+    { step: "Gather", summary: "Collect all ingredients and equipment before starting." },
+    { step: "Sauce", summary: "Blend cottage cheese, garlic, lemon, salt, pepper, and water until smooth." },
+    { step: "Chickpeas", summary: "Crisp chickpeas in olive oil 5 min on medium-high." },
+    { step: "Gnocchi", summary: "Pan-fry gnocchi 3 min undisturbed, flip and cook 2 more min until golden." },
+    { step: "Tomatoes", summary: "Blister cherry tomatoes in same pan until charred and burst (~3 min)." },
+    { step: "Greens", summary: "Wilt spinach and heat peas in the pan (~90 sec)." },
+    { step: "Combine", summary: "Return gnocchi + chickpeas, pour sauce, toss over low heat 1 min." },
+    { step: "Plate", summary: "Top with crumbled feta and red pepper flakes. Serve immediately." },
+  ],
   steps: [
     {
       id: 0, title: "Gather everything",
@@ -143,9 +111,7 @@ const RULES = [
 
 const DEFAULT_NAMES = ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5", "Player 6", "Player 7", "Player 8"];
 const STORAGE_KEY = "liverpool-rummy-state";
-
 const defaultRummyState = () => ({ phase: "setup", playerCount: 5, names: [...DEFAULT_NAMES], scores: Array(5).fill(null).map(() => []), currentRound: 0 });
-
 function loadRummyState() {
   try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : defaultRummyState(); } catch { return defaultRummyState(); }
 }
@@ -159,32 +125,10 @@ function formatTime(seconds) {
   return `${m}m ${s}s`;
 }
 
-// ─── RECIPE COMPONENTS ────────────────────────────────────────────────────────
+// ─── TIMER (stateless display, state lives in parent) ─────────────────────────
 
-function TimerButton({ duration, t }) {
-  const [timeLeft, setTimeLeft] = useState(duration);
-  const [running, setRunning] = useState(false);
-  const [done, setDone] = useState(false);
-  const intervalRef = useRef(null);
-
-  useEffect(() => {
-    if (running && timeLeft > 0) {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) { clearInterval(intervalRef.current); setRunning(false); setDone(true); return 0; }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(intervalRef.current);
-  }, [running]);
-
-  const handleClick = () => {
-    if (done) { setTimeLeft(duration); setDone(false); setRunning(false); }
-    else if (running) { clearInterval(intervalRef.current); setRunning(false); }
-    else setRunning(true);
-  };
-
+function TimerButton({ stepId, duration, timerState, onTimerAction, t }) {
+  const { timeLeft, running, done } = timerState;
   const progress = 1 - timeLeft / duration;
   const circumference = 2 * Math.PI * 18;
   const btnBg = done ? t.successBg : running ? t.tipBg : t.bgAlt;
@@ -192,7 +136,7 @@ function TimerButton({ duration, t }) {
   const btnColor = done ? t.successText : running ? t.tipText : t.textBody;
 
   return (
-    <button onClick={handleClick} style={{
+    <button onClick={() => onTimerAction(stepId)} style={{
       display: "flex", alignItems: "center", gap: "10px",
       background: btnBg, border: `2px solid ${btnBorder}`,
       borderRadius: "40px", padding: "8px 16px 8px 10px",
@@ -215,6 +159,40 @@ function TimerButton({ duration, t }) {
   );
 }
 
+// ─── ACTIVE TIMERS BAR ────────────────────────────────────────────────────────
+
+function ActiveTimersBar({ timerStates, steps, onTimerAction, t }) {
+  const running = steps.filter(s => s.duration && timerStates[s.id]?.running);
+  if (running.length === 0) return null;
+  return (
+    <div style={{
+      position: "sticky", top: 0, zIndex: 20,
+      background: t.tipBg, borderBottom: `2px solid ${t.tipBorder}`,
+      padding: "10px 16px", display: "flex", gap: "10px", flexWrap: "wrap",
+      alignItems: "center",
+    }}>
+      <span style={{ fontSize: "12px", fontWeight: 700, color: t.tipText, textTransform: "uppercase", letterSpacing: "0.06em" }}>⏱ Running</span>
+      {running.map(step => {
+        const ts = timerStates[step.id];
+        return (
+          <div key={step.id} onClick={() => onTimerAction(step.id)} style={{
+            display: "flex", alignItems: "center", gap: "6px",
+            background: t.bgCard, border: `1px solid ${t.gold}`,
+            borderRadius: "20px", padding: "5px 12px", cursor: "pointer",
+            fontSize: "13px", fontWeight: 600, color: t.tipText,
+          }}>
+            <span>{step.title}</span>
+            <span style={{ color: t.accent, fontVariantNumeric: "tabular-nums" }}>{formatTime(ts.timeLeft)}</span>
+            <span style={{ fontSize: "11px", color: t.textMuted }}>⏸</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── RECIPE COMPONENTS ────────────────────────────────────────────────────────
+
 function CheckItem({ label, t }) {
   const [checked, setChecked] = useState(false);
   return (
@@ -231,9 +209,7 @@ function CheckItem({ label, t }) {
       }}>
         {checked && <span style={{ color: "#fff", fontSize: "11px", fontWeight: 800 }}>✓</span>}
       </div>
-      <span style={{ fontSize: "13px", color: t.textBody, lineHeight: 1.4, textDecoration: checked ? "line-through" : "none" }}>
-        {label}
-      </span>
+      <span style={{ fontSize: "13px", color: t.textBody, lineHeight: 1.4, textDecoration: checked ? "line-through" : "none" }}>{label}</span>
     </div>
   );
 }
@@ -251,74 +227,222 @@ function GatherSection({ gather, t }) {
   );
 }
 
-function StepCard({ step, index, active, onClick, t }) {
+function StepCard({ step, index, expanded, onToggle, timerState, onTimerAction, t }) {
+  const hasTimer = !!step.duration;
+  const timerRunning = hasTimer && timerState?.running;
+  const timerDone = hasTimer && timerState?.done;
+
   return (
-    <div onClick={onClick} style={{
-      background: active ? t.bgCard : t.bgAlt,
-      border: `2px solid ${active ? t.borderAccent : t.border}`,
-      borderRadius: "16px", padding: "20px 24px", cursor: "pointer",
-      transition: "all 0.25s", boxShadow: active ? t.cardShadow : "none",
+    <div style={{
+      background: expanded ? t.bgCard : t.bgAlt,
+      border: `2px solid ${expanded ? t.borderAccent : timerRunning ? t.gold : t.border}`,
+      borderRadius: "16px", padding: "18px 22px", cursor: "pointer",
+      transition: "all 0.25s", boxShadow: expanded ? t.cardShadow : "none",
     }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>
+      <div onClick={onToggle} style={{ display: "flex", alignItems: "center", gap: "14px" }}>
         <div style={{
-          minWidth: "36px", height: "36px", borderRadius: "50%",
-          background: active ? t.accent : t.border,
-          color: active ? "#fff" : t.textMuted,
+          minWidth: "34px", height: "34px", borderRadius: "50%",
+          background: expanded ? t.accent : timerRunning ? t.gold : t.border,
+          color: expanded || timerRunning ? "#fff" : t.textMuted,
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontWeight: 800, fontSize: index === 0 ? "18px" : "15px", transition: "all 0.25s",
+          fontWeight: 800, fontSize: index === 0 ? "16px" : "14px", transition: "all 0.25s", flexShrink: 0,
         }}>
           {index === 0 ? "📋" : index}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "17px", fontWeight: 700, color: t.text, marginBottom: active ? "10px" : "0" }}>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "16px", fontWeight: 700, color: t.text }}>
             {step.title}
           </div>
-          {active && (
-            <div style={{ animation: "fadeIn 0.3s ease" }}>
-              <p style={{ margin: "0 0 10px", color: t.textBody, fontSize: "15px", lineHeight: "1.6" }}>{step.instruction}</p>
-              {step.gather && <GatherSection gather={step.gather} t={t} />}
-              {step.tip && (
-                <div style={{ background: t.tipBg, border: `1px solid ${t.tipBorder}`, borderRadius: "10px", padding: "10px 14px", fontSize: "13px", color: t.tipText, display: "flex", gap: "8px", alignItems: "flex-start", marginTop: "12px" }}>
-                  <span style={{ fontSize: "16px" }}>💡</span>
-                  <span>{step.tip}</span>
-                </div>
-              )}
-              {step.duration && <TimerButton duration={step.duration} t={t} />}
+          {!expanded && hasTimer && (
+            <div style={{ fontSize: "12px", color: timerRunning ? t.gold : timerDone ? t.successText : t.textMuted, marginTop: "2px" }}>
+              {timerRunning ? `⏱ ${formatTime(timerState.timeLeft)} remaining` : timerDone ? "✓ Done" : `⏱ ${formatTime(step.duration)}`}
             </div>
           )}
         </div>
+        <div style={{ fontSize: "18px", color: t.textMuted, transition: "transform 0.2s", transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}>›</div>
       </div>
+
+      {expanded && (
+        <div style={{ animation: "fadeIn 0.25s ease", marginTop: "14px" }}>
+          <p style={{ margin: "0 0 10px", color: t.textBody, fontSize: "15px", lineHeight: "1.6" }}>{step.instruction}</p>
+          {step.gather && <GatherSection gather={step.gather} t={t} />}
+          {step.tip && (
+            <div style={{ background: t.tipBg, border: `1px solid ${t.tipBorder}`, borderRadius: "10px", padding: "10px 14px", fontSize: "13px", color: t.tipText, display: "flex", gap: "8px", alignItems: "flex-start", marginTop: "12px" }}>
+              <span style={{ fontSize: "16px" }}>💡</span>
+              <span>{step.tip}</span>
+            </div>
+          )}
+          {hasTimer && (
+            <TimerButton stepId={step.id} duration={step.duration} timerState={timerState} onTimerAction={onTimerAction} t={t} />
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
+// ─── OVERVIEW DROPDOWN ────────────────────────────────────────────────────────
+
+function OverviewDropdown({ overview, t, onClose }) {
+  return (
+    <div style={{
+      position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50,
+      background: t.bgCard, border: `1px solid ${t.border}`,
+      borderRadius: "14px", marginTop: "8px", padding: "16px",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+        <div style={{ fontSize: "12px", fontWeight: 700, color: t.accent, textTransform: "uppercase", letterSpacing: "0.08em" }}>Recipe Overview</div>
+        <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.textMuted, fontSize: "18px", lineHeight: 1 }}>✕</button>
+      </div>
+      {overview.map((item, i) => (
+        <div key={i} style={{ display: "flex", gap: "12px", alignItems: "flex-start", marginBottom: "10px" }}>
+          <div style={{
+            minWidth: "24px", height: "24px", borderRadius: "50%", background: t.bgAlt,
+            border: `1px solid ${t.border}`, display: "flex", alignItems: "center",
+            justifyContent: "center", fontSize: "11px", fontWeight: 700, color: t.textMuted, flexShrink: 0,
+          }}>{i + 1}</div>
+          <div>
+            <span style={{ fontSize: "13px", fontWeight: 700, color: t.text }}>{item.step}: </span>
+            <span style={{ fontSize: "13px", color: t.textBody }}>{item.summary}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── RECIPE VIEW ──────────────────────────────────────────────────────────────
+
 function RecipeView({ t, onBack }) {
-  const [activeStep, setActiveStep] = useState(0);
   const r = recipeData;
+
+  // All steps expanded by default
+  const [expandedSteps, setExpandedSteps] = useState(() => new Set(r.steps.map(s => s.id)));
+  const [showOverview, setShowOverview] = useState(false);
+
+  // Timer state lifted here so timers persist across step expansions
+  const [timerStates, setTimerStates] = useState(() => {
+    const init = {};
+    r.steps.forEach(s => {
+      if (s.duration) init[s.id] = { timeLeft: s.duration, running: false, done: false };
+    });
+    return init;
+  });
+  const intervalsRef = useRef({});
+
+  // Tick all running timers
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setTimerStates(prev => {
+        const next = { ...prev };
+        let changed = false;
+        Object.keys(next).forEach(id => {
+          const ts = next[id];
+          if (ts.running && ts.timeLeft > 0) {
+            next[id] = { ...ts, timeLeft: ts.timeLeft - 1 };
+            changed = true;
+          } else if (ts.running && ts.timeLeft <= 0) {
+            next[id] = { ...ts, running: false, done: true, timeLeft: 0 };
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(tick);
+  }, []);
+
+  const handleTimerAction = (stepId) => {
+    setTimerStates(prev => {
+      const ts = prev[stepId];
+      const step = r.steps.find(s => s.id === stepId);
+      if (ts.done) return { ...prev, [stepId]: { timeLeft: step.duration, running: false, done: false } };
+      return { ...prev, [stepId]: { ...ts, running: !ts.running } };
+    });
+  };
+
+  const allExpanded = expandedSteps.size === r.steps.length;
+  const toggleAll = () => {
+    if (allExpanded) setExpandedSteps(new Set());
+    else setExpandedSteps(new Set(r.steps.map(s => s.id)));
+  };
+  const toggleStep = (id) => {
+    setExpandedSteps(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: t.bg, fontFamily: "'Lora', Georgia, serif", paddingBottom: "60px" }}>
-      <div style={{ background: t.headerGrad, padding: "20px 24px 16px", textAlign: "center" }}>
+      {/* Header */}
+      <div style={{ background: t.headerGrad, padding: "20px 24px 16px", textAlign: "center", position: "relative" }}>
         <button onClick={onBack} style={{ position: "absolute", left: 16, top: 20, background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "8px", color: "#fff", fontSize: "20px", cursor: "pointer", padding: "6px 12px" }}>←</button>
-        <div style={{ fontSize: "40px", marginBottom: "6px" }}>{r.emoji}</div>
-        <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", fontWeight: 900, color: "#fff", margin: "0 0 4px", lineHeight: 1.2 }}>{r.title.split(" with")[0]}</h1>
+        <div style={{ fontSize: "36px", marginBottom: "4px" }}>{r.emoji}</div>
+        <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "22px", fontWeight: 900, color: "#fff", margin: "0 0 4px", lineHeight: 1.2 }}>{r.title.split(" with")[0]}</h1>
         <div style={{ color: "rgba(255,255,255,0.85)", fontSize: "13px", fontWeight: 600 }}>{r.subtitle}</div>
-        <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "14px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
           {r.stats.map(([icon, label]) => (
-            <div key={label} style={{ background: "rgba(255,255,255,0.2)", borderRadius: "20px", padding: "5px 12px", fontSize: "12px", color: "#fff", fontWeight: 600 }}>{icon} {label}</div>
+            <div key={label} style={{ background: "rgba(255,255,255,0.2)", borderRadius: "20px", padding: "4px 12px", fontSize: "12px", color: "#fff", fontWeight: 600 }}>{icon} {label}</div>
           ))}
         </div>
       </div>
-      <div style={{ padding: "20px 16px 0", maxWidth: "600px", margin: "0 auto" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {r.steps.map((step, i) => <StepCard key={step.id} step={step} index={i} active={activeStep === i} onClick={() => setActiveStep(i)} t={t} />)}
+
+      {/* Active timers bar */}
+      <ActiveTimersBar timerStates={timerStates} steps={r.steps} onTimerAction={handleTimerAction} t={t} />
+
+      {/* Controls row */}
+      <div style={{ padding: "14px 16px 0", maxWidth: "600px", margin: "0 auto", position: "relative" }}>
+        <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+          {/* Overview button */}
+          <button onClick={() => setShowOverview(v => !v)} style={{
+            flex: 1, padding: "10px 14px", borderRadius: "10px",
+            border: `1px solid ${showOverview ? t.accent : t.border}`,
+            background: showOverview ? t.accent : t.bgCard,
+            color: showOverview ? "#fff" : t.textBody,
+            fontFamily: "inherit", fontWeight: 600, fontSize: "13px", cursor: "pointer",
+          }}>
+            📋 Overview {showOverview ? "▲" : "▼"}
+          </button>
+          {/* Collapse/expand all */}
+          <button onClick={toggleAll} style={{
+            flex: 1, padding: "10px 14px", borderRadius: "10px",
+            border: `1px solid ${t.border}`, background: t.bgCard,
+            color: t.textBody, fontFamily: "inherit", fontWeight: 600, fontSize: "13px", cursor: "pointer",
+          }}>
+            {allExpanded ? "⊖ Collapse All" : "⊕ Expand All"}
+          </button>
         </div>
-        <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
-          <button onClick={() => setActiveStep(s => Math.max(0, s - 1))} disabled={activeStep === 0} style={{ flex: 1, padding: "14px", borderRadius: "12px", border: `2px solid ${t.border}`, background: activeStep === 0 ? t.bgAlt : t.bgCard, color: activeStep === 0 ? t.textMuted : t.textBody, fontFamily: "inherit", fontWeight: 700, fontSize: "15px", cursor: activeStep === 0 ? "default" : "pointer" }}>← Back</button>
-          <button onClick={() => setActiveStep(s => Math.min(r.steps.length - 1, s + 1))} disabled={activeStep === r.steps.length - 1} style={{ flex: 1, padding: "14px", borderRadius: "12px", border: `2px solid ${t.accent}`, background: activeStep === r.steps.length - 1 ? t.bgAlt : t.accent, color: activeStep === r.steps.length - 1 ? t.textMuted : "#fff", fontFamily: "inherit", fontWeight: 700, fontSize: "15px", cursor: activeStep === r.steps.length - 1 ? "default" : "pointer" }}>Next →</button>
-        </div>
-        {activeStep === r.steps.length - 1 && (
-          <div style={{ marginTop: "16px", background: t.successBg, border: `2px solid ${t.successBorder}`, borderRadius: "14px", padding: "16px 20px", textAlign: "center", color: t.successText, fontWeight: 700, fontSize: "16px" }}>🎉 Enjoy your gnocchi!</div>
+
+        {/* Overview dropdown */}
+        {showOverview && (
+          <OverviewDropdown overview={r.overview} t={t} onClose={() => setShowOverview(false)} />
         )}
+      </div>
+
+      {/* Steps */}
+      <div style={{ padding: "0 16px", maxWidth: "600px", margin: "0 auto" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {r.steps.map((step, i) => (
+            <StepCard
+              key={step.id}
+              step={step}
+              index={i}
+              expanded={expandedSteps.has(step.id)}
+              onToggle={() => toggleStep(step.id)}
+              timerState={step.duration ? timerStates[step.id] : null}
+              onTimerAction={handleTimerAction}
+              t={t}
+            />
+          ))}
+        </div>
+
+        {/* Done banner */}
+        <div style={{ marginTop: "20px", background: t.successBg, border: `2px solid ${t.successBorder}`, borderRadius: "14px", padding: "16px 20px", textAlign: "center", color: t.successText, fontWeight: 700, fontSize: "16px" }}>
+          🎉 Enjoy your gnocchi!
+        </div>
       </div>
     </div>
   );
@@ -374,7 +498,6 @@ function LiverpoolRummy({ t, onBack }) {
 
   return (
     <div style={{ minHeight: "100vh", background: t.rummyBg, fontFamily: "Georgia, serif", color: t.text }}>
-      {/* Header */}
       <div style={{ background: t.rummyHeader, borderBottom: `1px solid ${t.rummyCardBorder}`, padding: "20px 24px 16px", textAlign: "center", position: "sticky", top: 0, zIndex: 10 }}>
         <button onClick={onBack} style={{ position: "absolute", left: 16, top: 20, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "8px", color: t.rummyHeaderText, fontSize: "20px", cursor: "pointer", padding: "6px 12px" }}>←</button>
         <div style={{ fontSize: 11, letterSpacing: 4, color: t.rummyMuted, textTransform: "uppercase", marginBottom: 4 }}>Card Game Tracker</div>
@@ -414,7 +537,6 @@ function LiverpoolRummy({ t, onBack }) {
       )}
 
       <div style={{ maxWidth: 540, margin: "0 auto", padding: "24px 16px" }}>
-        {/* SETUP */}
         {phase === "setup" && (
           <div>
             <div style={{ textAlign: "center", marginBottom: 28 }}>
@@ -428,16 +550,12 @@ function LiverpoolRummy({ t, onBack }) {
             </div>
             <div style={{ fontSize: 13, color: t.rummyMuted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>Player Names</div>
             {Array.from({ length: playerCount }).map((_, i) => (
-              <input key={i} value={names[i] || ""} onChange={e => handleNameChange(i, e.target.value)}
-                placeholder={DEFAULT_NAMES[i]} style={{ display: "block", width: "100%", boxSizing: "border-box", background: t.rummyInputBg, border: `1px solid ${t.border}`, borderRadius: 10, color: t.text, fontSize: 15, padding: "12px 14px", marginBottom: 8, outline: "none", fontFamily: "Georgia, serif" }} />
+              <input key={i} value={names[i] || ""} onChange={e => handleNameChange(i, e.target.value)} placeholder={DEFAULT_NAMES[i]} style={{ display: "block", width: "100%", boxSizing: "border-box", background: t.rummyInputBg, border: `1px solid ${t.border}`, borderRadius: 10, color: t.text, fontSize: 15, padding: "12px 14px", marginBottom: 8, outline: "none", fontFamily: "Georgia, serif" }} />
             ))}
-            <button onClick={handleStart} style={{ width: "100%", marginTop: 16, background: `linear-gradient(135deg, ${t.rummyAccent}, ${t.rummyAccentLight})`, color: "#0f1117", border: "none", borderRadius: 12, padding: "16px", fontSize: 17, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia, serif" }}>
-              Start Game →
-            </button>
+            <button onClick={handleStart} style={{ width: "100%", marginTop: 16, background: `linear-gradient(135deg, ${t.rummyAccent}, ${t.rummyAccentLight})`, color: "#0f1117", border: "none", borderRadius: 12, padding: "16px", fontSize: 17, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia, serif" }}>Start Game →</button>
           </div>
         )}
 
-        {/* GAME */}
         {phase === "game" && (
           <div>
             {showContract && (
@@ -499,7 +617,6 @@ function LiverpoolRummy({ t, onBack }) {
           </div>
         )}
 
-        {/* END */}
         {phase === "end" && (
           <div>
             <div style={{ textAlign: "center", marginBottom: 28 }}>
@@ -553,18 +670,13 @@ function LiverpoolRummy({ t, onBack }) {
 function HomeScreen({ t, onNavigate }) {
   return (
     <div style={{ minHeight: "100vh", background: t.bg, fontFamily: "'Lora', Georgia, serif", display: "flex", flexDirection: "column" }}>
-      {/* Hero */}
       <div style={{ background: t.headerGrad, padding: "56px 24px 48px", textAlign: "center" }}>
         <div style={{ fontSize: 14, letterSpacing: 5, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", marginBottom: 10 }}>Welcome</div>
         <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "36px", fontWeight: 900, color: "#fff", margin: "0 0 10px", textShadow: "0 2px 12px rgba(0,0,0,0.2)" }}>Aadesh's App</h1>
         <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "15px", margin: 0 }}>Recipes & Games, all in one place</p>
       </div>
-
-      {/* Cards */}
       <div style={{ flex: 1, padding: "32px 20px", maxWidth: "540px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         <div style={{ fontSize: 11, letterSpacing: 4, color: t.textMuted, textTransform: "uppercase", marginBottom: 20 }}>What are we doing?</div>
-
-        {/* Recipes */}
         <div onClick={() => onNavigate("recipes")} style={{ background: t.bgCard, border: `2px solid ${t.border}`, borderRadius: "20px", padding: "28px 24px", marginBottom: "16px", cursor: "pointer", transition: "all 0.2s", boxShadow: t.cardShadow }}>
           <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
             <div style={{ width: 64, height: 64, borderRadius: "16px", background: t.headerGrad, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "30px", flexShrink: 0 }}>🍳</div>
@@ -572,17 +684,13 @@ function HomeScreen({ t, onNavigate }) {
               <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "20px", fontWeight: 700, color: t.text, marginBottom: "4px" }}>Recipes</div>
               <div style={{ fontSize: "13px", color: t.textMuted, lineHeight: 1.4 }}>Step-by-step cooking with timers</div>
               <div style={{ marginTop: "10px", display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                {["🥔 Crispy Gnocchi"].map(tag => (
-                  <span key={tag} style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>{tag}</span>
-                ))}
+                <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>🥔 Crispy Gnocchi</span>
                 <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textMuted }}>+ more soon</span>
               </div>
             </div>
             <div style={{ fontSize: "22px", color: t.textMuted }}>›</div>
           </div>
         </div>
-
-        {/* Games */}
         <div onClick={() => onNavigate("games")} style={{ background: t.bgCard, border: `2px solid ${t.border}`, borderRadius: "20px", padding: "28px 24px", cursor: "pointer", transition: "all 0.2s", boxShadow: t.cardShadow }}>
           <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
             <div style={{ width: 64, height: 64, borderRadius: "16px", background: `linear-gradient(135deg, #3d2b1a, #6b4c2a)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "30px", flexShrink: 0 }}>🃏</div>
@@ -590,9 +698,7 @@ function HomeScreen({ t, onNavigate }) {
               <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "20px", fontWeight: 700, color: t.text, marginBottom: "4px" }}>Games</div>
               <div style={{ fontSize: "13px", color: t.textMuted, lineHeight: 1.4 }}>Score trackers for game night</div>
               <div style={{ marginTop: "10px", display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                {["🂡 Liverpool Rummy"].map(tag => (
-                  <span key={tag} style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>{tag}</span>
-                ))}
+                <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>🂡 Liverpool Rummy</span>
                 <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textMuted }}>+ more soon</span>
               </div>
             </div>
@@ -674,7 +780,7 @@ function RecipesHub({ t, onBack, onSelectRecipe }) {
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
-  const [screen, setScreen] = useState("home"); // home | recipes | recipe-gnocchi | games | game-rummy
+  const [screen, setScreen] = useState("home");
   const t = THEMES[darkMode ? "dark" : "light"];
 
   return (
@@ -685,21 +791,14 @@ export default function App() {
         * { box-sizing: border-box; }
         input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
       `}</style>
-
-      {/* Dark mode toggle — always visible */}
-      <button
-        onClick={() => setDarkMode(d => !d)}
-        style={{
-          position: "fixed", top: 16, right: 16, zIndex: 1000,
-          background: t.bgCard, border: `1px solid ${t.border}`,
-          borderRadius: "50%", width: 40, height: 40,
-          fontSize: "18px", cursor: "pointer", display: "flex",
-          alignItems: "center", justifyContent: "center",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-        }}
-      >
-        {t.toggleIcon}
-      </button>
+      <button onClick={() => setDarkMode(d => !d)} style={{
+        position: "fixed", top: 16, right: 16, zIndex: 1000,
+        background: t.bgCard, border: `1px solid ${t.border}`,
+        borderRadius: "50%", width: 40, height: 40,
+        fontSize: "18px", cursor: "pointer", display: "flex",
+        alignItems: "center", justifyContent: "center",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      }}>{t.toggleIcon}</button>
 
       {screen === "home" && <HomeScreen t={t} onNavigate={setScreen} />}
       {screen === "recipes" && <RecipesHub t={t} onBack={() => setScreen("home")} onSelectRecipe={id => setScreen(`recipe-${id}`)} />}
