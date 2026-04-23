@@ -313,10 +313,31 @@ function OverviewDropdown({ overview, t, onClose }) {
 }
 
 // ─── ALARM SOUND ─────────────────────────────────────────────────────────────
+// Shared AudioContext reused across calls — iOS requires resume() from user gesture
+
+let sharedAudioCtx = null;
+
+function getAudioCtx() {
+  if (!sharedAudioCtx) sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return sharedAudioCtx;
+}
+
+function unlockAudioCtx() {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === "suspended") ctx.resume();
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch (e) {}
+}
 
 function playAlarm() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getAudioCtx();
+    if (ctx.state === "suspended") ctx.resume();
     const beepTones = [880, 1100, 880, 1100];
     beepTones.forEach((freq, i) => {
       const osc = ctx.createOscillator();
@@ -332,9 +353,7 @@ function playAlarm() {
       osc.start(start);
       osc.stop(start + 0.25);
     });
-  } catch (e) {
-    // Audio not available — fail silently
-  }
+  } catch (e) {}
 }
 
 // ─── RECIPE VIEW ──────────────────────────────────────────────────────────────
@@ -359,15 +378,8 @@ function RecipeView({ t, onBack }) {
 
   const unlockAudio = () => {
     if (audioUnlockedRef.current) return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const buf = ctx.createBuffer(1, 1, 22050);
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(ctx.destination);
-      src.start(0);
-      audioUnlockedRef.current = true;
-    } catch (e) {}
+    unlockAudioCtx();
+    audioUnlockedRef.current = true;
   };
 
   // Tick all running timers
