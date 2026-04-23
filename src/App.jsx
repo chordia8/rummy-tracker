@@ -312,6 +312,31 @@ function OverviewDropdown({ overview, t, onClose }) {
   );
 }
 
+// ─── ALARM SOUND ─────────────────────────────────────────────────────────────
+
+function playAlarm() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const beepTones = [880, 1100, 880, 1100];
+    beepTones.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const start = ctx.currentTime + i * 0.25;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.4, start + 0.02);
+      gain.gain.linearRampToValueAtTime(0, start + 0.2);
+      osc.start(start);
+      osc.stop(start + 0.25);
+    });
+  } catch (e) {
+    // Audio not available — fail silently
+  }
+}
+
 // ─── RECIPE VIEW ──────────────────────────────────────────────────────────────
 
 function RecipeView({ t, onBack }) {
@@ -345,6 +370,7 @@ function RecipeView({ t, onBack }) {
           } else if (ts.running && ts.timeLeft <= 0) {
             next[id] = { ...ts, running: false, done: true, timeLeft: 0 };
             changed = true;
+            playAlarm();
           }
         });
         return changed ? next : prev;
