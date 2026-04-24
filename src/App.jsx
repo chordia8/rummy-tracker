@@ -254,10 +254,11 @@ const RULES = [
 
 const CABO_STORAGE_KEY = "cabo-state";
 const CABO_POWER_CARDS = [
-  { label: "7 or 8", action: "Peek", desc: "Look at one of your own face-down cards." },
-  { label: "9 or 10", action: "Spy", desc: "Look at one of an opponent's face-down cards." },
-  { label: "J or Q", action: "Swap", desc: "Swap one of your cards with an opponent's — without looking at either." },
-  { label: "King", action: "0 pts", desc: "Worth 0 points (or -1 in some versions). Keep it!" },
+  { label: "7 / 8", action: "Peek", desc: "Look at one of your own face-down cards." },
+  { label: "9 / 10", action: "Spy", desc: "Look at one of an opponent's face-down cards." },
+  { label: "J / Q", action: "Blind Swap", desc: "Swap one of your cards with an opponent's — neither player looks." },
+  { label: "Black King", action: "Seen Swap", desc: "Swap one of your cards with an opponent's — you may look at both before deciding." },
+  { label: "Red King", action: "0 pts", desc: "Worth 0 points. Keep it!" },
 ];
 const defaultCaboState = () => ({ phase: "setup", playerCount: 4, names: Array(8).fill(""), scores: Array(8).fill(null).map(() => []), currentRound: 0 });
 function loadCaboState() {
@@ -991,7 +992,7 @@ const CABO_RULES = [
   { title: "Objective", text: "Have the lowest total card value when the round ends. Kings = 0 pts, Aces = 1 pt, number cards = face value, J/Q = 10 pts." },
   { title: "The Deal", text: "Each player is dealt 4 cards face-down in a row. Before play begins, everyone peeks at their two outer cards once — memorise them!" },
   { title: "On Your Turn", text: "Draw from the deck (swap it with one of your face-down cards, or discard it), OR take the top discard and swap it with one of your cards." },
-  { title: "Power Cards", text: "When discarding: 7 or 8 → Peek at one of your own cards. 9 or 10 → Spy on one opponent's card. J or Q → Swap one of your cards with an opponent's (without looking). King → Worth 0 pts — keep it!" },
+  { title: "Power Cards", text: "When discarding: 7 or 8 → Peek at one of your own cards. 9 or 10 → Spy on one opponent's card. J or Q → Blind swap: swap one of your cards with an opponent's without looking at either. Black King → Seen swap: swap one of your cards with an opponent's and you may look at both. Red King → Worth 0 pts — keep it!" },
   { title: "Calling Cabo", text: "On your turn instead of drawing, you may call \"Cabo!\" Everyone else gets one final turn, then all cards are revealed and scored." },
   { title: "Penalty", text: "If the player who called Cabo doesn't have the lowest score, they receive a +10 point penalty on top of their actual score." },
   { title: "Winning", text: "Play as many rounds as agreed. Lowest cumulative score wins." },
@@ -1072,7 +1073,18 @@ function Cabo({ t, onBack }) {
           {CABO_RULES.map(r => (
             <div key={r.title} style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 13, color: t.rummyAccent, fontWeight: "bold", marginBottom: 2 }}>{r.title}</div>
-              <div style={{ fontSize: 13, color: t.textBody, lineHeight: 1.5 }}>{r.text}</div>
+              {r.title === "Power Cards" ? (
+                <div>
+                  {CABO_POWER_CARDS.map((c, i) => (
+                    <div key={i} style={{ display: "flex", gap: 10, alignItems: "baseline", marginBottom: 5 }}>
+                      <span style={{ fontSize: 13, fontWeight: "bold", color: t.textBody, minWidth: 76, flexShrink: 0 }}>{c.label}</span>
+                      <span style={{ fontSize: 13, color: t.textBody, lineHeight: 1.5 }}><span style={{ fontWeight: "bold" }}>{c.action}:</span> {c.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 13, color: t.textBody, lineHeight: 1.5 }}>{r.text}</div>
+              )}
             </div>
           ))}
           {btn("Close ✕", () => setShowRules(false), { marginTop: 4, color: t.textMuted })}
