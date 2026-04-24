@@ -987,195 +987,161 @@ function LiverpoolRummy({ t, onBack }) {
 
 // ─── CABO TRACKER ─────────────────────────────────────────────────────────────
 
+const CABO_RULES = [
+  { title: "Objective", text: "Have the lowest total card value when the round ends. Kings = 0 pts, Aces = 1 pt, number cards = face value, J/Q = 10 pts." },
+  { title: "The Deal", text: "Each player is dealt 4 cards face-down in a row. Before play begins, everyone peeks at their two outer cards once — memorise them!" },
+  { title: "On Your Turn", text: "Draw from the deck (swap it with one of your face-down cards, or discard it), OR take the top discard and swap it with one of your cards." },
+  { title: "Power Cards", text: "When discarding: 7 or 8 → Peek at one of your own cards. 9 or 10 → Spy on one opponent's card. J or Q → Swap one of your cards with an opponent's (without looking). King → Worth 0 pts — keep it!" },
+  { title: "Calling Cabo", text: "On your turn instead of drawing, you may call \"Cabo!\" Everyone else gets one final turn, then all cards are revealed and scored." },
+  { title: "Penalty", text: "If the player who called Cabo doesn't have the lowest score, they receive a +10 point penalty on top of their actual score." },
+  { title: "Winning", text: "Play as many rounds as agreed. Lowest cumulative score wins." },
+];
+
 function Cabo({ t, onBack }) {
-  const [state, setState] = useState(loadCaboState);
-  const { phase, playerCount, names, scores, currentRound } = state;
-
-  useEffect(() => {
-    localStorage.setItem(CABO_STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
-
-  const save = (patch) => setState(prev => ({ ...prev, ...patch }));
-
-  const totalScore = (i) => (scores[i] || []).reduce((a, b) => a + b, 0);
-  const getRanking = () => names.slice(0, playerCount).map((name, i) => ({ name, total: totalScore(i) })).sort((a, b) => a.total - b.total);
-
+  const saved = loadCaboState();
+  const [phase, setPhase] = useState(saved.phase);
+  const [playerCount, setPlayerCount] = useState(saved.playerCount || 4);
+  const [names, setNames] = useState(saved.names);
+  const [scores, setScores] = useState(saved.scores);
+  const [currentRound, setCurrentRound] = useState(saved.currentRound);
   const [inputs, setInputs] = useState(Array(8).fill(""));
   const [caboCallerIdx, setCaboCallerIdx] = useState(null);
-  const [showPowerCards, setShowPowerCards] = useState(false);
   const [showRules, setShowRules] = useState(false);
-  const [showRestartConfirm, setShowRestartConfirm] = useState(false);
+  const [showRestart, setShowRestart] = useState(false);
 
-  const handleBack = () => {
-    if (currentRound === 0) return;
-    const newScores = scores.map(s => s.slice(0, -1));
-    save({ scores: newScores, currentRound: currentRound - 1 });
-    setInputs(Array(8).fill(""));
-    setCaboCallerIdx(null);
-  };
+  useEffect(() => {
+    try { localStorage.setItem(CABO_STORAGE_KEY, JSON.stringify({ phase, playerCount, names, scores, currentRound })); } catch {}
+  }, [phase, playerCount, names, scores, currentRound]);
 
+  const totalScore = (i) => scores[i]?.reduce((a, b) => a + b, 0) ?? 0;
+  const handleNameChange = (i, val) => { const n = [...names]; n[i] = val; setNames(n); };
   const handleStart = () => {
-    const filledNames = names.slice(0, playerCount).map((n, i) => n.trim() || `Player ${i + 1}`);
-    const newNames = [...filledNames, ...names.slice(playerCount)];
-    save({ phase: "playing", names: newNames, scores: Array(8).fill(null).map(() => []), currentRound: 0 });
-    setInputs(Array(8).fill(""));
-    setCaboCallerIdx(null);
+    setNames(Array(8).fill("").map((_, i) => names[i] || `Player ${i + 1}`));
+    setScores(Array(playerCount).fill(null).map(() => []));
+    setPhase("game");
   };
-
+  const handleInputChange = (i, val) => { const arr = [...inputs]; arr[i] = val; setInputs(arr); };
   const handleSubmitRound = () => {
-    const newScores = scores.map((playerScores, i) => {
-      let score = parseInt(inputs[i]) || 0;
+    const newScores = scores.map((s, i) => {
+      let score = parseInt(inputs[i], 10);
+      if (isNaN(score)) score = 0;
       if (caboCallerIdx === i) {
-        const others = names.slice(0, playerCount).map((_, j) => parseInt(inputs[j]) || 0).filter((_, j) => j !== i);
-        const isLowest = others.every(s => score <= s);
-        if (!isLowest) score += 10; // penalty
+        const others = names.slice(0, playerCount).map((_, j) => { const v = parseInt(inputs[j], 10); return isNaN(v) ? 0 : v; }).filter((_, j) => j !== i);
+        if (!others.every(o => score <= o)) score += 10;
       }
-      return [...playerScores, score];
+      return [...s, score];
     });
-    const nextRound = currentRound + 1;
-    save({ scores: newScores, currentRound: nextRound });
+    setScores(newScores);
     setInputs(Array(8).fill(""));
     setCaboCallerIdx(null);
+    setCurrentRound(currentRound + 1);
   };
-
+  const handleBack = () => {
+    if (phase === "end") { setPhase("game"); setCurrentRound(currentRound - 1); setScores(scores.map(s => s.slice(0, -1))); setInputs(Array(8).fill("")); setCaboCallerIdx(null); return; }
+    if (currentRound === 0) return;
+    setScores(scores.map(s => s.slice(0, -1))); setCurrentRound(currentRound - 1); setInputs(Array(8).fill("")); setCaboCallerIdx(null);
+  };
   const handleRestart = () => {
-    const fresh = defaultCaboState();
-    setState(fresh);
-    setInputs(Array(8).fill(""));
-    setCaboCallerIdx(null);
-    setShowRules(false);
-    setShowRestartConfirm(false);
+    setPhase("setup"); setNames(Array(8).fill("")); setScores(Array(playerCount).fill(null).map(() => []));
+    setCurrentRound(0); setInputs(Array(8).fill("")); setCaboCallerIdx(null); setShowRules(false); setShowRestart(false);
+    localStorage.removeItem(CABO_STORAGE_KEY);
   };
+  const getRanking = () => [...names].slice(0, playerCount).map((name, i) => ({ name, total: totalScore(i) })).sort((a, b) => a.total - b.total);
 
   const btn = (label, onClick, style = {}) => (
-    <button onClick={onClick} style={{ background: `linear-gradient(135deg, ${t.rummyAccent}, ${t.rummyAccentLight})`, color: "#0f1117", border: "none", borderRadius: 10, padding: "14px 20px", fontSize: 15, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia, serif", ...style }}>{label}</button>
+    <button onClick={onClick} style={{ background: "transparent", border: `1px solid ${t.border}`, borderRadius: 6, color: t.textMuted, fontSize: 12, padding: "6px 14px", cursor: "pointer", fontFamily: "Georgia, serif", ...style }}>{label}</button>
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: t.rummyBg, fontFamily: "'Lora', Georgia, serif" }}>
-      {/* Header */}
-      <div style={{ background: t.rummyHeader, padding: "20px 24px 28px", textAlign: "center", position: "relative" }}>
-        <button onClick={onBack} style={{ position: "absolute", left: 16, top: 20, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "8px", color: "#fff", fontSize: "20px", cursor: "pointer", padding: "6px 12px" }}>←</button>
-        {(phase === "playing" || phase === "end") && (
-          <div style={{ position: "absolute", right: 16, top: 20, display: "flex", gap: 6 }}>
-            <button onClick={() => setShowRules(r => !r)} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "8px", color: "#fff", fontSize: "13px", cursor: "pointer", padding: "6px 12px" }}>Rules</button>
-            <button onClick={() => setShowRestartConfirm(true)} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "8px", color: "#fff", fontSize: "13px", cursor: "pointer", padding: "6px 12px" }}>Restart</button>
+    <div style={{ minHeight: "100vh", background: t.rummyBg, fontFamily: "Georgia, serif", color: t.text }}>
+      <div style={{ background: t.rummyHeader, borderBottom: `1px solid ${t.rummyCardBorder}`, padding: "20px 24px 16px", textAlign: "center", position: "sticky", top: 0, zIndex: 10 }}>
+        <button onClick={onBack} style={{ position: "absolute", left: 16, top: 20, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "8px", color: t.rummyHeaderText, fontSize: "20px", cursor: "pointer", padding: "6px 12px" }}>←</button>
+        <div style={{ fontSize: 11, letterSpacing: 4, color: t.rummyMuted, textTransform: "uppercase", marginBottom: 4 }}>Card Game Tracker</div>
+        <div style={{ fontSize: 24, fontWeight: "bold", color: t.rummyHeaderText, letterSpacing: 1 }}>Cabo</div>
+        {phase === "game" && <div style={{ fontSize: 13, color: t.rummyMuted, marginTop: 4 }}>Round {currentRound + 1}</div>}
+        {phase !== "setup" && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 10 }}>
+            {btn("📖 Rules", () => setShowRules(!showRules), { color: t.rummyAccent, border: `1px solid ${t.rummyAccent}55` })}
+            {btn("🔄 Restart", () => setShowRestart(true), { color: t.rummyDanger, border: `1px solid ${t.rummyDanger}55` })}
           </div>
         )}
-        <div style={{ fontSize: "36px", marginBottom: "8px" }}>🃟</div>
-        <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "26px", fontWeight: 900, color: t.rummyHeaderText, margin: "0 0 4px" }}>Cabo</h1>
-        <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "13px" }}>Lowest score wins</div>
       </div>
 
-      {showRestartConfirm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div style={{ background: t.bgCard, borderRadius: 16, padding: "28px 24px", maxWidth: 320, width: "100%", textAlign: "center" }}>
-            <div style={{ fontSize: 24, marginBottom: 12 }}>🔄</div>
-            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 18, fontWeight: 700, color: t.text, marginBottom: 8 }}>Restart game?</div>
-            <div style={{ fontSize: 13, color: t.textMuted, marginBottom: 24 }}>All scores will be lost.</div>
+      {showRules && (
+        <div style={{ background: t.bgAlt, borderBottom: `1px solid ${t.border}`, padding: "16px 24px" }}>
+          {CABO_RULES.map(r => (
+            <div key={r.title} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, color: t.rummyAccent, fontWeight: "bold", marginBottom: 2 }}>{r.title}</div>
+              <div style={{ fontSize: 13, color: t.textBody, lineHeight: 1.5 }}>{r.text}</div>
+            </div>
+          ))}
+          {btn("Close ✕", () => setShowRules(false), { marginTop: 4, color: t.textMuted })}
+        </div>
+      )}
+
+      {showRestart && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: "24px" }}>
+          <div style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 14, padding: "28px 24px", maxWidth: 320, width: "100%", textAlign: "center" }}>
+            <div style={{ fontSize: 18, fontWeight: "bold", color: t.text, marginBottom: 8 }}>Restart Game?</div>
+            <div style={{ fontSize: 13, color: t.textBody, marginBottom: 20 }}>All scores will be cleared.</div>
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setShowRestartConfirm(false)} style={{ flex: 1, background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: 10, padding: "12px", fontSize: 14, color: t.textBody, cursor: "pointer", fontFamily: "Georgia, serif" }}>Cancel</button>
-              <button onClick={handleRestart} style={{ flex: 1, background: t.rummyDanger, border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: "bold", color: "#fff", cursor: "pointer", fontFamily: "Georgia, serif" }}>Restart</button>
+              {btn("Cancel", () => setShowRestart(false), { flex: 1, padding: "12px" })}
+              <button onClick={handleRestart} style={{ flex: 1, background: t.rummyDanger, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: "bold", padding: "12px", cursor: "pointer", fontFamily: "Georgia, serif" }}>Restart</button>
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ padding: "24px 20px", maxWidth: "540px", margin: "0 auto" }}>
+      <div style={{ maxWidth: 540, margin: "0 auto", padding: "24px 16px" }}>
         {phase === "setup" && (
           <div>
-            <div style={{ fontSize: 11, letterSpacing: 4, color: t.rummyMuted, textTransform: "uppercase", marginBottom: 16 }}>Number of Players</div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
-              {[2,3,4,5,6,7,8].map(n => (
-                <button key={n} onClick={() => save({ playerCount: n })} style={{ width: 44, height: 44, borderRadius: "50%", border: "none", cursor: "pointer", fontFamily: "Georgia, serif", fontSize: 16, fontWeight: "bold", background: playerCount === n ? `linear-gradient(135deg, ${t.rummyAccent}, ${t.rummyAccentLight})` : t.bgCard, color: playerCount === n ? "#0f1117" : t.textMuted, boxShadow: t.cardShadow }}>{n}</button>
+            <div style={{ textAlign: "center", marginBottom: 28 }}>
+              <div style={{ fontSize: 11, letterSpacing: 4, color: t.rummyMuted, textTransform: "uppercase", marginBottom: 8 }}>New Game</div>
+              <div style={{ fontSize: 26, fontWeight: "bold", color: t.text }}>How many players?</div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 28 }}>
+              {[2, 3, 4, 5, 6, 7, 8].map(n => (
+                <button key={n} onClick={() => setPlayerCount(n)} style={{ width: 42, height: 42, borderRadius: "50%", border: `2px solid ${playerCount === n ? t.rummyAccent : t.border}`, background: playerCount === n ? t.rummyAccent : "transparent", color: playerCount === n ? "#0f1117" : t.text, fontSize: 16, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia, serif", transition: "all 0.2s" }}>{n}</button>
               ))}
             </div>
-            <div style={{ fontSize: 11, letterSpacing: 4, color: t.rummyMuted, textTransform: "uppercase", marginBottom: 16 }}>Player Names</div>
-            {Array(playerCount).fill(null).map((_, i) => (
-              <div key={i} style={{ marginBottom: 10 }}>
-                <input value={names[i] || ""} onChange={e => { const n = [...names]; n[i] = e.target.value; save({ names: n }); }} placeholder={`Player ${i + 1}`} style={{ width: "100%", background: t.rummyInputBg, border: `1px solid ${t.border}`, borderRadius: 8, color: t.text, fontSize: 15, padding: "12px 14px", outline: "none", boxSizing: "border-box", fontFamily: "'Georgia', serif" }} />
-              </div>
+            <div style={{ fontSize: 13, color: t.rummyMuted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>Player Names</div>
+            {Array.from({ length: playerCount }).map((_, i) => (
+              <input key={i} value={names[i] || ""} onChange={e => handleNameChange(i, e.target.value)} placeholder={`Player ${i + 1}`} style={{ display: "block", width: "100%", boxSizing: "border-box", background: t.rummyInputBg, border: `1px solid ${t.border}`, borderRadius: 10, color: t.text, fontSize: 15, padding: "12px 14px", marginBottom: 8, outline: "none", fontFamily: "Georgia, serif" }} />
             ))}
-            <div style={{ marginTop: 16, background: t.tipBg, border: `1px solid ${t.tipBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 20 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: t.accent, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Power Cards</div>
-              {CABO_POWER_CARDS.map((c, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: t.tipText, minWidth: 50 }}>{c.label}</span>
-                  <span style={{ fontSize: 13, color: t.tipText }}><strong>{c.action}:</strong> {c.desc}</span>
-                </div>
-              ))}
-            </div>
-            {btn("Start Game", handleStart, { width: "100%", marginTop: 4 })}
+            <button onClick={handleStart} style={{ width: "100%", marginTop: 16, background: `linear-gradient(135deg, ${t.rummyAccent}, ${t.rummyAccentLight})`, color: "#0f1117", border: "none", borderRadius: 12, padding: "16px", fontSize: 17, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia, serif" }}>Start Game →</button>
           </div>
         )}
 
-        {phase === "playing" && (
+        {phase === "game" && (
           <div>
-            {showRules && (
-              <div style={{ background: t.tipBg, border: `1px solid ${t.tipBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: t.accent, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>Cabo Rules</div>
-                <div style={{ fontSize: 13, color: t.tipText, marginBottom: 8 }}><strong>Goal:</strong> Have the lowest total card value. Kings = 0 pts, Aces = 1 pt, number cards = face value, J/Q = 10 pts.</div>
-                <div style={{ fontSize: 13, color: t.tipText, marginBottom: 8 }}><strong>On your turn:</strong> Draw from the deck (swap or discard it), or swap the top discard with one of your cards.</div>
-                <div style={{ fontSize: 13, color: t.tipText, marginBottom: 8 }}><strong>Calling Cabo:</strong> If you think you have the lowest score, call "Cabo!" Everyone else gets one final turn, then all cards are revealed.</div>
-                <div style={{ fontSize: 13, color: t.tipText, marginBottom: 6 }}><strong>Penalty:</strong> If the Cabo caller doesn't have the lowest score, they get +10 added to their score.</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: t.accent, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 12, marginBottom: 8 }}>Power Cards (on discard)</div>
-                {CABO_POWER_CARDS.map((c, i) => (
-                  <div key={i} style={{ display: "flex", gap: 10, marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: t.tipText, minWidth: 50 }}>{c.label}</span>
-                    <span style={{ fontSize: 13, color: t.tipText }}><strong>{c.action}:</strong> {c.desc}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 22, fontWeight: 700, color: t.text }}>Round {currentRound + 1}</div>
-              <button onClick={() => setShowPowerCards(p => !p)} style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 8, color: t.textMuted, fontSize: 12, padding: "6px 12px", cursor: "pointer", fontFamily: "Georgia, serif" }}>🃟 Power Cards</button>
-            </div>
-
-            {showPowerCards && (
-              <div style={{ background: t.tipBg, border: `1px solid ${t.tipBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 20 }}>
-                {CABO_POWER_CARDS.map((c, i) => (
-                  <div key={i} style={{ display: "flex", gap: 10, marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: t.tipText, minWidth: 50 }}>{c.label}</span>
-                    <span style={{ fontSize: 13, color: t.tipText }}><strong>{c.action}:</strong> {c.desc}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
             <div style={{ fontSize: 11, letterSpacing: 4, color: t.rummyMuted, textTransform: "uppercase", marginBottom: 10 }}>Who called Cabo?</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
-              <button onClick={() => setCaboCallerIdx(null)} style={{ borderRadius: 20, border: `1px solid ${t.border}`, padding: "6px 14px", fontSize: 13, cursor: "pointer", fontFamily: "Georgia, serif", background: caboCallerIdx === null ? t.rummyAccent : t.bgCard, color: caboCallerIdx === null ? "#0f1117" : t.textMuted }}>Nobody</button>
+              <button onClick={() => setCaboCallerIdx(null)} style={{ borderRadius: 20, border: `2px solid ${caboCallerIdx === null ? t.rummyAccent : t.border}`, padding: "6px 14px", fontSize: 13, cursor: "pointer", fontFamily: "Georgia, serif", background: caboCallerIdx === null ? t.rummyAccent : "transparent", color: caboCallerIdx === null ? "#0f1117" : t.text }}>Nobody</button>
               {names.slice(0, playerCount).map((name, i) => (
-                <button key={i} onClick={() => setCaboCallerIdx(i)} style={{ borderRadius: 20, border: `1px solid ${t.border}`, padding: "6px 14px", fontSize: 13, cursor: "pointer", fontFamily: "Georgia, serif", background: caboCallerIdx === i ? t.rummyAccent : t.bgCard, color: caboCallerIdx === i ? "#0f1117" : t.textMuted }}>{name}</button>
+                <button key={i} onClick={() => setCaboCallerIdx(i)} style={{ borderRadius: 20, border: `2px solid ${caboCallerIdx === i ? t.rummyAccent : t.border}`, padding: "6px 14px", fontSize: 13, cursor: "pointer", fontFamily: "Georgia, serif", background: caboCallerIdx === i ? t.rummyAccent : "transparent", color: caboCallerIdx === i ? "#0f1117" : t.text }}>{name}</button>
               ))}
             </div>
-
             {caboCallerIdx !== null && (
               <div style={{ background: t.tipBg, border: `1px solid ${t.tipBorder}`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: t.tipText, marginBottom: 16 }}>
-                💡 If {names[caboCallerIdx]} didn't have the lowest score, +10 penalty will be added automatically.
+                💡 If {names[caboCallerIdx]} didn't have the lowest score, +10 will be added automatically.
               </div>
             )}
-
-            <div style={{ fontSize: 11, letterSpacing: 4, color: t.rummyMuted, textTransform: "uppercase", marginBottom: 14 }}>Enter Scores</div>
+            <div style={{ fontSize: 13, color: t.rummyMuted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>Enter Scores</div>
             {names.slice(0, playerCount).map((name, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, background: caboCallerIdx === i ? t.tipBg : t.bgCard, border: `1px solid ${caboCallerIdx === i ? t.tipBorder : t.border}`, borderRadius: 10, padding: "10px 14px" }}>
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 10, padding: "10px 14px" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, color: t.text }}>{name} {caboCallerIdx === i ? "📣" : ""}</div>
+                  <div style={{ fontSize: 15, color: t.text }}>{name}{caboCallerIdx === i ? " 📣" : ""}</div>
                   <div style={{ fontSize: 12, color: t.rummyMuted }}>Total: {totalScore(i)}</div>
                 </div>
-                <input type="number" value={inputs[i]} onChange={e => { const n = [...inputs]; n[i] = e.target.value; setInputs(n); }} placeholder="pts" style={{ width: 72, background: t.rummyInputBg, border: `1px solid ${t.border}`, borderRadius: 6, color: t.text, fontSize: 16, padding: "8px 10px", outline: "none", textAlign: "center", fontFamily: "Georgia, serif" }} />
+                <input type="number" value={inputs[i]} onChange={e => handleInputChange(i, e.target.value)} placeholder="pts" style={{ width: 72, background: t.rummyInputBg, border: `1px solid ${t.border}`, borderRadius: 6, color: t.text, fontSize: 16, padding: "8px 10px", outline: "none", textAlign: "center", fontFamily: "Georgia, serif" }} />
               </div>
             ))}
-
             <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
               {currentRound > 0 && (
                 <button onClick={handleBack} style={{ flex: 1, background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 10, padding: "15px", fontSize: 15, color: t.textBody, cursor: "pointer", fontFamily: "Georgia, serif" }}>← Back</button>
               )}
-              {btn("Submit Round →", handleSubmitRound, { flex: 3 })}
+              <button onClick={handleSubmitRound} style={{ flex: 3, background: `linear-gradient(135deg, ${t.rummyAccent}, ${t.rummyAccentLight})`, color: "#0f1117", border: "none", borderRadius: 10, padding: "15px", fontSize: 16, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia, serif" }}>Submit Round →</button>
             </div>
-
             {scores[0]?.length > 0 && (
               <div style={{ marginTop: 32 }}>
                 <div style={{ fontSize: 13, color: t.rummyMuted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>Scoreboard</div>
@@ -1200,7 +1166,7 @@ function Cabo({ t, onBack }) {
                   </table>
                 </div>
                 <div style={{ marginTop: 16 }}>
-                  {btn("End Game & See Results", () => save({ phase: "end" }), { width: "100%", background: t.bgCard, color: t.textBody, border: `1px solid ${t.border}` })}
+                  <button onClick={() => setPhase("end")} style={{ width: "100%", background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 10, padding: "14px", fontSize: 15, color: t.textBody, cursor: "pointer", fontFamily: "Georgia, serif" }}>End Game & See Results →</button>
                 </div>
               </div>
             )}
@@ -1221,8 +1187,32 @@ function Cabo({ t, onBack }) {
                 <div style={{ fontSize: 20, color: rank === 0 ? t.rummyAccent : t.rummyMuted, fontWeight: "bold" }}>{p.total}</div>
               </div>
             ))}
+            <div style={{ marginTop: 28 }}>
+              <div style={{ fontSize: 13, color: t.rummyMuted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>Full Scoreboard</div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: "left", color: t.rummyMuted, padding: "6px 8px", borderBottom: `1px solid ${t.border}` }}>Player</th>
+                      {scores[0]?.map((_, r) => <th key={r} style={{ color: t.rummyMuted, padding: "6px 8px", borderBottom: `1px solid ${t.border}`, textAlign: "center" }}>R{r + 1}</th>)}
+                      <th style={{ color: t.rummyAccent, padding: "6px 8px", borderBottom: `1px solid ${t.border}`, textAlign: "center" }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {names.slice(0, playerCount).map((name, i) => (
+                      <tr key={i}>
+                        <td style={{ padding: "8px 8px", color: t.text, borderBottom: `1px solid ${t.bgAlt}` }}>{name}</td>
+                        {scores[i].map((s, r) => <td key={r} style={{ padding: "8px 8px", color: t.textBody, textAlign: "center", borderBottom: `1px solid ${t.bgAlt}` }}>{s}</td>)}
+                        <td style={{ padding: "8px 8px", color: t.rummyAccent, fontWeight: "bold", textAlign: "center", borderBottom: `1px solid ${t.bgAlt}` }}>{totalScore(i)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
             <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-              <button onClick={handleRestart} style={{ flex: 1, background: `linear-gradient(135deg, ${t.rummyAccent}, ${t.rummyAccentLight})`, color: "#0f1117", border: "none", borderRadius: 10, padding: "15px", fontSize: 16, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia, serif" }}>Play Again</button>
+              <button onClick={handleBack} style={{ flex: 1, background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: 10, padding: "15px", fontSize: 15, color: t.textBody, cursor: "pointer", fontFamily: "Georgia, serif" }}>← Back</button>
+              <button onClick={handleRestart} style={{ flex: 3, background: `linear-gradient(135deg, ${t.rummyAccent}, ${t.rummyAccentLight})`, color: "#0f1117", border: "none", borderRadius: 10, padding: "15px", fontSize: 16, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia, serif" }}>Play Again</button>
             </div>
           </div>
         )}
