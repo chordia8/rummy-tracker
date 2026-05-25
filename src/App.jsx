@@ -1604,13 +1604,16 @@ function Judgement({ t, onBack }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {state.names.slice(0, state.playerCount).map((name, pi) => (
+                  {state.names.slice(0, state.playerCount)
+                    .map((name, pi) => ({ name, pi, total: totals[pi], scores: state.scores[pi] }))
+                    .sort((a, b) => b.total - a.total)
+                    .map(({ name, pi, total, scores }) => (
                     <tr key={pi} style={{ borderTop: `1px solid ${t.rummyTableBorder}` }}>
                       <td style={{ padding: "9px 12px", color: t.text, fontWeight: 600, whiteSpace: "nowrap" }}>{name}</td>
-                      {state.scores[pi].map((sc, ri) => (
+                      {scores.map((sc, ri) => (
                         <td key={ri} style={{ padding: "9px 8px", textAlign: "center", color: sc >= 0 ? t.rummyAccent : t.rummyDanger, fontWeight: 600 }}>{sc > 0 ? `+${sc}` : sc}</td>
                       ))}
-                      <td style={{ padding: "9px 8px", textAlign: "center", fontWeight: 800, color: totals[pi] >= 0 ? t.rummyAccent : t.rummyDanger }}>{totals[pi] > 0 ? `+${totals[pi]}` : totals[pi]}</td>
+                      <td style={{ padding: "9px 8px", textAlign: "center", fontWeight: 800, color: total >= 0 ? t.rummyAccent : t.rummyDanger }}>{total > 0 ? `+${total}` : total}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1651,8 +1654,20 @@ function Judgement({ t, onBack }) {
                 </div>
               );
             })}
-            <div style={{ padding: "14px 16px" }}>
-              <button onClick={handleSubmitBids} style={{ width: "100%", padding: "13px", background: t.rummyAccent, border: "none", borderRadius: "10px", color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
+            <div style={{ padding: "14px 16px", display: "flex", gap: "10px" }}>
+              <button onClick={() => {
+                if (state.currentRound === 0) {
+                  setState(s => ({ ...s, phase: "setup", bids: [] }));
+                } else {
+                  const newScores = state.scores.map(arr => arr.slice(0, -0).slice(0, arr.length));
+                  setState(s => ({ ...s, currentRound: s.currentRound - 1, bids: [], scores: s.scores.map(arr => arr.slice(0, s.currentRound - 1)) }));
+                }
+                setBidInputs(Array(state.playerCount).fill(""));
+                setSubPhase("bidding");
+              }} style={{ padding: "13px 16px", background: t.rummyBg, border: `1px solid ${t.rummyTableBorder}`, borderRadius: "10px", color: t.rummyMuted, fontSize: "15px", fontFamily: "inherit", cursor: "pointer" }}>
+                ← Back
+              </button>
+              <button onClick={handleSubmitBids} style={{ flex: 1, padding: "13px", background: t.rummyAccent, border: "none", borderRadius: "10px", color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
                 Lock Bids →
               </button>
             </div>
@@ -1687,8 +1702,14 @@ function Judgement({ t, onBack }) {
                 </div>
               );
             })}
-            <div style={{ padding: "14px 16px" }}>
-              <button onClick={handleSubmitResults} style={{ width: "100%", padding: "13px", background: t.rummyAccent, border: "none", borderRadius: "10px", color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
+            <div style={{ padding: "14px 16px", display: "flex", gap: "10px" }}>
+              <button onClick={() => {
+                setHitInputs(Array(state.playerCount).fill(null));
+                setSubPhase("bidding");
+              }} style={{ padding: "13px 16px", background: t.rummyBg, border: `1px solid ${t.rummyTableBorder}`, borderRadius: "10px", color: t.rummyMuted, fontSize: "15px", fontFamily: "inherit", cursor: "pointer" }}>
+                ← Back
+              </button>
+              <button onClick={handleSubmitResults} style={{ flex: 1, padding: "13px", background: t.rummyAccent, border: "none", borderRadius: "10px", color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
                 {state.currentRound === JUDGEMENT_ROUNDS.length - 1 ? "Finish Game" : "Next Round →"}
               </button>
             </div>
