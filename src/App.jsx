@@ -1309,12 +1309,427 @@ function HomeScreen({ t, onNavigate }) {
                 <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>🂡 Liverpool Rummy</span>
                 <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>🃟 Cabo</span>
                 <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>🃏 Canasta</span>
+                <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>🎴 Judgement</span>
               </div>
             </div>
             <div style={{ fontSize: "22px", color: t.textMuted }}>›</div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── JUDGEMENT DATA ───────────────────────────────────────────────────────────
+
+const JUDGEMENT_ROUNDS = [
+  { round: 1, cards: 9 },
+  { round: 2, cards: 8 },
+  { round: 3, cards: 7 },
+  { round: 4, cards: 6 },
+  { round: 5, cards: 5 },
+  { round: 6, cards: 4 },
+  { round: 7, cards: 3 },
+  { round: 8, cards: 2 },
+  { round: 9, cards: 1 },
+  { round: 10, cards: 1 },
+];
+
+const JUDGEMENT_STORAGE_KEY = "judgement-state";
+const JUDGEMENT_MAX_PLAYERS = 15;
+const defaultJudgementState = () => ({
+  phase: "setup",
+  playerCount: 4,
+  names: Array(JUDGEMENT_MAX_PLAYERS).fill("").map((_, i) => `Player ${i + 1}`),
+  scores: Array(JUDGEMENT_MAX_PLAYERS).fill(null).map(() => []),
+  currentRound: 0,
+  bids: [],
+  results: [],
+});
+function loadJudgementState() {
+  try {
+    const raw = localStorage.getItem(JUDGEMENT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : defaultJudgementState();
+  } catch { return defaultJudgementState(); }
+}
+
+function calcJudgementScore(bid, tricks) {
+  if (bid === 0) return tricks === 0 ? 5 : -5;
+  return tricks === bid ? bid * 10 : -(bid * 10);
+}
+
+// ─── JUDGEMENT COMPONENT ──────────────────────────────────────────────────────
+
+function Judgement({ t, onBack }) {
+  const [state, setState] = useState(loadJudgementState);
+  const [showRules, setShowRules] = useState(false);
+  const [showRestart, setShowRestart] = useState(false);
+  // bidding phase: collect all bids, then collect all trick results
+  const [bidInputs, setBidInputs] = useState([]);
+  const [trickInputs, setTrickInputs] = useState([]);
+  const [subPhase, setSubPhase] = useState("bidding"); // "bidding" | "results"
+
+  useEffect(() => {
+    localStorage.setItem(JUDGEMENT_STORAGE_KEY, JSON.stringify(state));
+  }, [state]);
+
+  // Reset bid/trick inputs when round changes
+  useEffect(() => {
+    if (state.phase === "playing") {
+      setBidInputs(Array(state.playerCount).fill(""));
+      setTrickInputs(Array(state.playerCount).fill(""));
+      setSubPhase("bidding");
+    }
+  }, [state.currentRound, state.phase]);
+
+  const handleStart = () => {
+    setState(s => ({
+      ...s,
+      phase: "playing",
+      scores: Array(s.playerCount).fill(null).map(() => []),
+      currentRound: 0,
+      bids: [],
+      results: [],
+    }));
+  };
+
+  const handleRestart = () => {
+    const fresh = defaultJudgementState();
+    fresh.playerCount = state.playerCount;
+    fresh.names = state.names.slice(0, state.playerCount);
+    setState(fresh);
+    setShowRestart(false);
+  };
+
+  const round = JUDGEMENT_ROUNDS[state.currentRound];
+  const tricks = round?.cards ?? 0;
+  const isBustRound = tricks === 1; // bust rule waived for 1-card rounds
+
+  // Compute total bids so far (for bust-the-dealer enforcement)
+  const bidSum = bidInputs.reduce((acc, v, i) => {
+    const n = parseInt(v);
+    return acc + (isNaN(n) ? 0 : n);
+  }, 0);
+
+  const handleSubmitBids = () => {
+    // Validate all filled
+    const parsed = bidInputs.map(v => parseInt(v));
+    if (parsed.some(isNaN)) { alert("Please enter a bid for every player."); return; }
+    if (parsed.some(b => b < 0)) { alert("Bids cannot be negative."); return; }
+    if (!isBustRound && parsed.reduce((a, b) => a + b, 0) === tricks) {
+      alert(`Total bids cannot equal ${tricks} (bust-the-dealer rule). The last player must adjust.`);
+      return;
+    }
+    setState(s => ({ ...s, bids: parsed }));
+    setSubPhase("results");
+    setTrickInputs(Array(state.playerCount).fill(""));
+  };
+
+  const handleSubmitResults = () => {
+    const parsed = trickInputs.map(v => parseInt(v));
+    if (parsed.some(isNaN)) { alert("Please enter tricks won for every player."); return; }
+    if (parsed.some(n => n < 0)) { alert("Tricks cannot be negative."); return; }
+    if (parsed.reduce((a, b) => a + b, 0) !== tricks) {
+      alert(`Tricks must add up to ${tricks} (the number of cards dealt this round).`); return;
+    }
+    const roundScores = state.bids.map((bid, i) => calcJudgementScore(bid, parsed[i]));
+    const newScores = state.scores.map((arr, i) => [...arr, roundScores[i]]);
+    const isLast = state.currentRound === JUDGEMENT_ROUNDS.length - 1;
+    setState(s => ({
+      ...s,
+      scores: newScores,
+      currentRound: isLast ? s.currentRound : s.currentRound + 1,
+      phase: isLast ? "finished" : "playing",
+      bids: [],
+      results: parsed,
+    }));
+  };
+
+  const totals = state.scores.map(arr => arr.reduce((a, b) => a + b, 0));
+  const ranked = state.names.slice(0, state.playerCount)
+    .map((name, i) => ({ name, total: totals[i] }))
+    .sort((a, b) => b.total - a.total);
+
+  const inputStyle = {
+    width: "60px", padding: "8px 4px", textAlign: "center",
+    background: t.rummyInputBg, border: `1px solid ${t.rummyTableBorder}`,
+    borderRadius: "8px", color: t.text, fontSize: "16px", fontFamily: "inherit",
+  };
+
+  const headerStyle = {
+    background: t.rummyHeader, padding: "0 0 0 0",
+    position: "sticky", top: 0, zIndex: 30,
+  };
+
+  // ── Setup screen ──
+  if (state.phase === "setup") {
+    return (
+      <div style={{ minHeight: "100vh", background: t.rummyBg, fontFamily: "'Lora', Georgia, serif" }}>
+        <div style={headerStyle}>
+          <div style={{ padding: "20px 24px 20px", textAlign: "center", position: "relative" }}>
+            <button onClick={onBack} style={{ position: "absolute", left: 16, top: 20, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "8px", color: "#fff", fontSize: "20px", cursor: "pointer", padding: "6px 12px" }}>←</button>
+            <div style={{ fontSize: "36px", marginBottom: "4px" }}>🎴</div>
+            <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", fontWeight: 900, color: t.rummyHeaderText, margin: "0 0 4px" }}>Judgement</h1>
+            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: "13px" }}>Trick-taking · Bid exactly right</div>
+          </div>
+        </div>
+        <div style={{ padding: "28px 20px", maxWidth: "480px", margin: "0 auto" }}>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "18px", fontWeight: 700, color: t.text, marginBottom: "12px" }}>Number of Players</div>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "24px" }}>
+            {[2,3,4,5,6,7,8,9,10,11,12,13,14,15].map(n => (
+              <button key={n} onClick={() => setState(s => ({ ...s, playerCount: n }))}
+                style={{ width: "40px", height: "40px", borderRadius: "50%", border: `2px solid ${state.playerCount === n ? t.rummyAccent : t.inputBorder}`, background: state.playerCount === n ? t.rummyAccent : t.inputBg, color: state.playerCount === n ? "#fff" : t.text, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                {n}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "18px", fontWeight: 700, color: t.text, marginBottom: "16px" }}>Player Names</div>
+          {Array.from({ length: state.playerCount }, (_, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "10px" }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: t.rummyAccent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 700, color: "#fff", flexShrink: 0 }}>{i + 1}</div>
+              <input
+                value={state.names[i]}
+                onChange={e => {
+                  const names = [...state.names];
+                  names[i] = e.target.value;
+                  setState(s => ({ ...s, names }));
+                }}
+                placeholder={`Player ${i + 1}`}
+                style={{ flex: 1, padding: "10px 14px", background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: "10px", color: t.text, fontSize: "15px", fontFamily: "inherit" }}
+              />
+            </div>
+          ))}
+          <button onClick={handleStart} style={{ marginTop: "24px", width: "100%", padding: "14px", background: t.rummyAccent, border: "none", borderRadius: "12px", color: "#fff", fontSize: "16px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
+            Start Game →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Finished screen ──
+  if (state.phase === "finished") {
+    return (
+      <div style={{ minHeight: "100vh", background: t.rummyBg, fontFamily: "'Lora', Georgia, serif" }}>
+        <div style={headerStyle}>
+          <div style={{ padding: "20px 24px 20px", textAlign: "center", position: "relative" }}>
+            <button onClick={onBack} style={{ position: "absolute", left: 16, top: 20, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "8px", color: "#fff", fontSize: "20px", cursor: "pointer", padding: "6px 12px" }}>←</button>
+            <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", fontWeight: 900, color: t.rummyHeaderText, margin: "0 0 4px" }}>Final Scores</h1>
+            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: "13px" }}>Judgement · 10 rounds complete</div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "center", paddingBottom: "16px", gap: "10px" }}>
+            <button onClick={() => setShowRestart(true)} style={{ background: "#c0392b", border: "none", borderRadius: "20px", color: "#fff", fontSize: "13px", fontWeight: 700, padding: "7px 18px", cursor: "pointer", fontFamily: "inherit" }}>🔄 New Game</button>
+          </div>
+        </div>
+        <div style={{ padding: "24px 20px", maxWidth: "480px", margin: "0 auto" }}>
+          {ranked.map((p, i) => (
+            <div key={p.name} style={{ display: "flex", alignItems: "center", gap: "14px", background: i === 0 ? t.rummyCard : t.rummyBg, border: `2px solid ${i === 0 ? t.rummyAccent : t.rummyCardBorder}`, borderRadius: "14px", padding: "16px 18px", marginBottom: "10px", boxShadow: i === 0 ? t.cardShadow : "none" }}>
+              <div style={{ fontSize: i === 0 ? "28px" : "20px", width: "36px", textAlign: "center" }}>{["🥇", "🥈", "🥉"][i] || `${i + 1}.`}</div>
+              <div style={{ flex: 1, fontFamily: "'Playfair Display', Georgia, serif", fontSize: "17px", fontWeight: 700, color: t.text }}>{p.name}</div>
+              <div style={{ fontSize: "20px", fontWeight: 800, color: p.total >= 0 ? t.rummyAccent : t.rummyDanger }}>{p.total > 0 ? `+${p.total}` : p.total}</div>
+            </div>
+          ))}
+        </div>
+        {showRestart && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+            <div style={{ background: t.rummyCard, borderRadius: "20px", padding: "28px 24px", maxWidth: "360px", width: "100%", textAlign: "center", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}>
+              <div style={{ fontSize: "32px", marginBottom: "12px" }}>🔄</div>
+              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "20px", fontWeight: 700, color: t.text, marginBottom: "8px" }}>Start New Game?</div>
+              <div style={{ color: t.rummyMuted, fontSize: "14px", marginBottom: "24px" }}>All scores will be cleared.</div>
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button onClick={() => setShowRestart(false)} style={{ flex: 1, padding: "12px", background: t.rummyBg, border: `1px solid ${t.rummyTableBorder}`, borderRadius: "12px", color: t.text, fontSize: "15px", fontFamily: "inherit", cursor: "pointer" }}>Cancel</button>
+                <button onClick={handleRestart} style={{ flex: 1, padding: "12px", background: "#c0392b", border: "none", borderRadius: "12px", color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>Restart</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Playing screen ──
+  const JUDGEMENT_RULES = [
+    { title: "Objective", text: "Predict exactly how many tricks you'll win each round. Score points only if you hit your bid exactly." },
+    { title: "Rounds", text: "10 rounds total: 9 cards → 8 → 7 → 6 → 5 → 4 → 3 → 2 → 1 → 1. The number of cards dealt = tricks available that round." },
+    { title: "Trump", text: "After dealing, flip the next card to determine trump suit for the round." },
+    { title: "Bust the Dealer", text: "The last player to bid cannot make the total bids equal the number of tricks. This guarantees at least one player is off their bid. Waived for 1-card rounds." },
+    { title: "Scoring", text: "Bid 0, make 0 → +5. Bid 0, miss → −5. Bid N (≥1), hit exactly → +10×N. Bid N (≥1), miss → −10×N." },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: t.rummyBg, fontFamily: "'Lora', Georgia, serif", paddingBottom: "60px" }}>
+      {/* Sticky header */}
+      <div style={headerStyle}>
+        <div style={{ padding: "16px 24px 12px", textAlign: "center", position: "relative" }}>
+          <button onClick={onBack} style={{ position: "absolute", left: 16, top: 16, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "8px", color: "#fff", fontSize: "20px", cursor: "pointer", padding: "6px 12px" }}>←</button>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "20px", fontWeight: 900, color: t.rummyHeaderText }}>Judgement</div>
+          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: "12px", marginTop: "2px" }}>
+            Round {state.currentRound + 1} of {JUDGEMENT_ROUNDS.length} · {tricks} card{tricks !== 1 ? "s" : ""} dealt
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", paddingBottom: "14px", gap: "10px" }}>
+          <button onClick={() => setShowRules(r => !r)} style={{ background: t.rummyAccent, border: "none", borderRadius: "20px", color: "#fff", fontSize: "13px", fontWeight: 700, padding: "7px 18px", cursor: "pointer", fontFamily: "inherit" }}>📖 Rules</button>
+          <button onClick={() => setShowRestart(true)} style={{ background: "#c0392b", border: "none", borderRadius: "20px", color: "#fff", fontSize: "13px", fontWeight: 700, padding: "7px 18px", cursor: "pointer", fontFamily: "inherit" }}>🔄 Restart</button>
+        </div>
+        {showRules && (
+          <div style={{ background: t.rummyCard, borderTop: `1px solid ${t.rummyTableBorder}`, padding: "16px 20px" }}>
+            {JUDGEMENT_RULES.map((rule, i) => (
+              <div key={i} style={{ marginBottom: "10px" }}>
+                <span style={{ fontWeight: 700, color: t.rummyAccent, fontSize: "13px" }}>{rule.title}: </span>
+                <span style={{ color: t.rummyMuted, fontSize: "13px" }}>{rule.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding: "20px 16px", maxWidth: "540px", margin: "0 auto" }}>
+
+        {/* Round progress pills */}
+        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginBottom: "20px", justifyContent: "center" }}>
+          {JUDGEMENT_ROUNDS.map((r, i) => {
+            const done = i < state.currentRound;
+            const active = i === state.currentRound;
+            return (
+              <div key={i} style={{
+                width: "28px", height: "28px", borderRadius: "50%",
+                background: done ? t.rummyAccent : active ? t.rummyAccentLight : t.rummyCard,
+                border: `2px solid ${active ? t.rummyAccent : done ? t.rummyAccent : t.rummyTableBorder}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "10px", fontWeight: 700,
+                color: done || active ? (done ? "#fff" : t.accentDark) : t.rummyMuted,
+              }}>{r.cards}</div>
+            );
+          })}
+        </div>
+
+        {/* Scoreboard */}
+        {state.scores[0]?.length > 0 && (
+          <div style={{ background: t.rummyCard, border: `1px solid ${t.rummyTableBorder}`, borderRadius: "14px", marginBottom: "20px", overflow: "hidden" }}>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ background: t.rummyBg }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", color: t.rummyMuted, fontWeight: 600, whiteSpace: "nowrap" }}>Player</th>
+                    {state.scores[0].map((_, ri) => (
+                      <th key={ri} style={{ padding: "10px 8px", textAlign: "center", color: t.rummyMuted, fontWeight: 600 }}>R{ri + 1}</th>
+                    ))}
+                    <th style={{ padding: "10px 8px", textAlign: "center", color: t.rummyAccent, fontWeight: 700 }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {state.names.slice(0, state.playerCount).map((name, pi) => (
+                    <tr key={pi} style={{ borderTop: `1px solid ${t.rummyTableBorder}` }}>
+                      <td style={{ padding: "9px 12px", color: t.text, fontWeight: 600, whiteSpace: "nowrap" }}>{name}</td>
+                      {state.scores[pi].map((sc, ri) => (
+                        <td key={ri} style={{ padding: "9px 8px", textAlign: "center", color: sc >= 0 ? t.rummyAccent : t.rummyDanger, fontWeight: 600 }}>{sc > 0 ? `+${sc}` : sc}</td>
+                      ))}
+                      <td style={{ padding: "9px 8px", textAlign: "center", fontWeight: 800, color: totals[pi] >= 0 ? t.rummyAccent : t.rummyDanger }}>{totals[pi] > 0 ? `+${totals[pi]}` : totals[pi]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Bidding phase */}
+        {subPhase === "bidding" && (
+          <div style={{ background: t.rummyCard, border: `1px solid ${t.rummyTableBorder}`, borderRadius: "14px", overflow: "hidden" }}>
+            <div style={{ padding: "14px 16px", borderBottom: `1px solid ${t.rummyTableBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700, color: t.text, fontSize: "16px" }}>Enter Bids</div>
+              <div style={{ fontSize: "12px", color: t.rummyMuted }}>{tricks} trick{tricks !== 1 ? "s" : ""} available</div>
+            </div>
+            {!isBustRound && (
+              <div style={{ padding: "10px 16px", background: t.tipBg, borderBottom: `1px solid ${t.tipBorder}`, fontSize: "12px", color: t.tipText }}>
+                ⚠️ Bust-the-dealer: total bids cannot equal {tricks}. Last bidder must adjust.
+                {bidSum > 0 && <span style={{ marginLeft: "8px", fontWeight: 700 }}>Current total: {bidSum}</span>}
+              </div>
+            )}
+            {state.names.slice(0, state.playerCount).map((name, i) => {
+              const isLast = i === state.playerCount - 1;
+              const currentBidTotal = bidInputs.slice(0, i).reduce((a, v) => { const n = parseInt(v); return a + (isNaN(n) ? 0 : n); }, 0);
+              const forbidden = (!isBustRound && isLast) ? tricks - currentBidTotal : null;
+              return (
+                <div key={i} style={{ padding: "12px 16px", borderTop: i === 0 ? "none" : `1px solid ${t.rummyTableBorder}`, display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, color: t.text, fontSize: "14px" }}>{name}</div>
+                    {forbidden !== null && forbidden >= 0 && (
+                      <div style={{ fontSize: "11px", color: t.rummyDanger, marginTop: "2px" }}>Cannot bid {forbidden}</div>
+                    )}
+                  </div>
+                  <input
+                    type="number" min="0" max={tricks}
+                    value={bidInputs[i] ?? ""}
+                    onChange={e => {
+                      const vals = [...bidInputs];
+                      vals[i] = e.target.value;
+                      setBidInputs(vals);
+                    }}
+                    style={inputStyle}
+                  />
+                </div>
+              );
+            })}
+            <div style={{ padding: "14px 16px" }}>
+              <button onClick={handleSubmitBids} style={{ width: "100%", padding: "13px", background: t.rummyAccent, border: "none", borderRadius: "10px", color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
+                Lock Bids →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Results phase */}
+        {subPhase === "results" && (
+          <div style={{ background: t.rummyCard, border: `1px solid ${t.rummyTableBorder}`, borderRadius: "14px", overflow: "hidden" }}>
+            <div style={{ padding: "14px 16px", borderBottom: `1px solid ${t.rummyTableBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700, color: t.text, fontSize: "16px" }}>Tricks Won</div>
+              <div style={{ fontSize: "12px", color: t.rummyMuted }}>Must total {tricks}</div>
+            </div>
+            {state.names.slice(0, state.playerCount).map((name, i) => {
+              const bid = state.bids[i];
+              return (
+                <div key={i} style={{ padding: "12px 16px", borderTop: i === 0 ? "none" : `1px solid ${t.rummyTableBorder}`, display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, color: t.text, fontSize: "14px" }}>{name}</div>
+                    <div style={{ fontSize: "12px", color: t.rummyMuted }}>Bid: {bid}</div>
+                  </div>
+                  <input
+                    type="number" min="0" max={tricks}
+                    value={trickInputs[i] ?? ""}
+                    onChange={e => {
+                      const vals = [...trickInputs];
+                      vals[i] = e.target.value;
+                      setTrickInputs(vals);
+                    }}
+                    style={inputStyle}
+                  />
+                </div>
+              );
+            })}
+            <div style={{ padding: "14px 16px" }}>
+              <button onClick={handleSubmitResults} style={{ width: "100%", padding: "13px", background: t.rummyAccent, border: "none", borderRadius: "10px", color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
+                {state.currentRound === JUDGEMENT_ROUNDS.length - 1 ? "Finish Game" : "Next Round →"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Restart modal */}
+      {showRestart && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: t.rummyCard, borderRadius: "20px", padding: "28px 24px", maxWidth: "360px", width: "100%", textAlign: "center", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}>
+            <div style={{ fontSize: "32px", marginBottom: "12px" }}>🔄</div>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "20px", fontWeight: 700, color: t.text, marginBottom: "8px" }}>Restart Game?</div>
+            <div style={{ color: t.rummyMuted, fontSize: "14px", marginBottom: "24px" }}>All scores will be cleared.</div>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button onClick={() => setShowRestart(false)} style={{ flex: 1, padding: "12px", background: t.rummyBg, border: `1px solid ${t.rummyTableBorder}`, borderRadius: "12px", color: t.text, fontSize: "15px", fontFamily: "inherit", cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleRestart} style={{ flex: 1, padding: "12px", background: "#c0392b", border: "none", borderRadius: "12px", color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>Restart</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1353,6 +1768,14 @@ function GamesHub({ t, onBack, onSelectGame }) {
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "18px", fontWeight: 700, color: t.text }}>Canasta</div>
             <div style={{ fontSize: "13px", color: t.textMuted, marginTop: "2px" }}>4 players · Rules reference</div>
+          </div>
+          <div style={{ fontSize: "22px", color: t.textMuted }}>›</div>
+        </div>
+        <div onClick={() => onSelectGame("judgement")} style={{ marginTop: "12px", background: t.bgCard, border: `2px solid ${t.border}`, borderRadius: "16px", padding: "22px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: "16px", boxShadow: t.cardShadow }}>
+          <div style={{ fontSize: "36px" }}>🎴</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "18px", fontWeight: 700, color: t.text }}>Judgement</div>
+            <div style={{ fontSize: "13px", color: t.textMuted, marginTop: "2px" }}>11 players · Score tracker</div>
           </div>
           <div style={{ fontSize: "22px", color: t.textMuted }}>›</div>
         </div>
@@ -1437,6 +1860,7 @@ export default function App() {
       {screen === "game-rummy" && <LiverpoolRummy t={t} onBack={() => setScreen("games")} />}
       {screen === "game-cabo" && <Cabo t={t} onBack={() => setScreen("games")} />}
       {screen === "game-canasta" && <CanastaRules t={t} onBack={() => setScreen("games")} />}
+      {screen === "game-judgement" && <Judgement t={t} onBack={() => setScreen("games")} />}
     </div>
   );
 }
