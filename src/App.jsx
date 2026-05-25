@@ -1366,7 +1366,7 @@ function Judgement({ t, onBack }) {
   const [showRestart, setShowRestart] = useState(false);
   // bidding phase: collect all bids, then collect all trick results
   const [bidInputs, setBidInputs] = useState([]);
-  const [trickInputs, setTrickInputs] = useState([]);
+  const [hitInputs, setHitInputs] = useState([]); // null | true | false per player
   const [subPhase, setSubPhase] = useState("bidding"); // "bidding" | "results"
 
   useEffect(() => {
@@ -1377,7 +1377,7 @@ function Judgement({ t, onBack }) {
   useEffect(() => {
     if (state.phase === "playing") {
       setBidInputs(Array(state.playerCount).fill(""));
-      setTrickInputs(Array(state.playerCount).fill(""));
+      setHitInputs(Array(state.playerCount).fill(null));
       setSubPhase("bidding");
     }
   }, [state.currentRound, state.phase]);
@@ -1403,36 +1403,23 @@ function Judgement({ t, onBack }) {
 
   const round = JUDGEMENT_ROUNDS[state.currentRound];
   const tricks = round?.cards ?? 0;
-  const isBustRound = tricks === 1; // bust rule waived for 1-card rounds
-
-  // Compute total bids so far (for bust-the-dealer enforcement)
-  const bidSum = bidInputs.reduce((acc, v, i) => {
-    const n = parseInt(v);
-    return acc + (isNaN(n) ? 0 : n);
-  }, 0);
 
   const handleSubmitBids = () => {
     // Validate all filled
     const parsed = bidInputs.map(v => parseInt(v));
     if (parsed.some(isNaN)) { alert("Please enter a bid for every player."); return; }
     if (parsed.some(b => b < 0)) { alert("Bids cannot be negative."); return; }
-    if (!isBustRound && parsed.reduce((a, b) => a + b, 0) === tricks) {
-      alert(`Total bids cannot equal ${tricks} (bust-the-dealer rule). The last player must adjust.`);
-      return;
-    }
     setState(s => ({ ...s, bids: parsed }));
     setSubPhase("results");
     setTrickInputs(Array(state.playerCount).fill(""));
   };
 
   const handleSubmitResults = () => {
-    const parsed = trickInputs.map(v => parseInt(v));
-    if (parsed.some(isNaN)) { alert("Please enter tricks won for every player."); return; }
-    if (parsed.some(n => n < 0)) { alert("Tricks cannot be negative."); return; }
-    if (parsed.reduce((a, b) => a + b, 0) !== tricks) {
-      alert(`Tricks must add up to ${tricks} (the number of cards dealt this round).`); return;
-    }
-    const roundScores = state.bids.map((bid, i) => calcJudgementScore(bid, parsed[i]));
+    if (hitInputs.some(v => v === null)) { alert("Please mark hit or bust for every player."); return; }
+    const roundScores = state.bids.map((bid, i) => {
+      const hit = hitInputs[i];
+      return calcJudgementScore(bid, hit ? bid : (bid === 0 ? 1 : 0));
+    });
     const newScores = state.scores.map((arr, i) => [...arr, roundScores[i]]);
     const isLast = state.currentRound === JUDGEMENT_ROUNDS.length - 1;
     setState(s => ({
@@ -1441,7 +1428,7 @@ function Judgement({ t, onBack }) {
       currentRound: isLast ? s.currentRound : s.currentRound + 1,
       phase: isLast ? "finished" : "playing",
       bids: [],
-      results: parsed,
+      results: hitInputs,
     }));
   };
 
@@ -1552,7 +1539,6 @@ function Judgement({ t, onBack }) {
     { title: "Objective", text: "Predict exactly how many tricks you'll win each round. Score points only if you hit your bid exactly." },
     { title: "Rounds", text: "10 rounds total: 9 cards → 8 → 7 → 6 → 5 → 4 → 3 → 2 → 1 → 1. The number of cards dealt = tricks available that round." },
     { title: "Trump", text: "After dealing, flip the next card to determine trump suit for the round." },
-    { title: "Bust the Dealer", text: "The last player to bid cannot make the total bids equal the number of tricks. This guarantees at least one player is off their bid. Waived for 1-card rounds." },
     { title: "Scoring", text: "Bid 0, make 0 → +5. Bid 0, miss → −5. Bid N (≥1), hit exactly → +10×N. Bid N (≥1), miss → −10×N." },
   ];
 
@@ -1638,25 +1624,19 @@ function Judgement({ t, onBack }) {
           <div style={{ background: t.rummyCard, border: `1px solid ${t.rummyTableBorder}`, borderRadius: "14px", overflow: "hidden" }}>
             <div style={{ padding: "14px 16px", borderBottom: `1px solid ${t.rummyTableBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700, color: t.text, fontSize: "16px" }}>Enter Bids</div>
-              <div style={{ fontSize: "12px", color: t.rummyMuted }}>{tricks} trick{tricks !== 1 ? "s" : ""} available</div>
-            </div>
-            {!isBustRound && (
-              <div style={{ padding: "10px 16px", background: t.tipBg, borderBottom: `1px solid ${t.tipBorder}`, fontSize: "12px", color: t.tipText }}>
-                ⚠️ Bust-the-dealer: total bids cannot equal {tricks}. Last bidder must adjust.
-                {bidSum > 0 && <span style={{ marginLeft: "8px", fontWeight: 700 }}>Current total: {bidSum}</span>}
+              <div style={{ fontSize: "12px", color: t.rummyMuted, textAlign: "right" }}>
+                <span>{tricks} available</span>
+                <span style={{ margin: "0 4px", color: t.rummyTableBorder }}>·</span>
+                <span style={{ color: (() => { const s = bidInputs.reduce((a, v) => { const n = parseInt(v); return a + (isNaN(n) ? 0 : n); }, 0); return s === tricks ? t.rummyAccent : s > tricks ? t.rummyDanger : t.rummyMuted; })() }}>
+                  {bidInputs.reduce((a, v) => { const n = parseInt(v); return a + (isNaN(n) ? 0 : n); }, 0)} bid
+                </span>
               </div>
-            )}
+            </div>
             {state.names.slice(0, state.playerCount).map((name, i) => {
-              const isLast = i === state.playerCount - 1;
-              const currentBidTotal = bidInputs.slice(0, i).reduce((a, v) => { const n = parseInt(v); return a + (isNaN(n) ? 0 : n); }, 0);
-              const forbidden = (!isBustRound && isLast) ? tricks - currentBidTotal : null;
               return (
                 <div key={i} style={{ padding: "12px 16px", borderTop: i === 0 ? "none" : `1px solid ${t.rummyTableBorder}`, display: "flex", alignItems: "center", gap: "12px" }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, color: t.text, fontSize: "14px" }}>{name}</div>
-                    {forbidden !== null && forbidden >= 0 && (
-                      <div style={{ fontSize: "11px", color: t.rummyDanger, marginTop: "2px" }}>Cannot bid {forbidden}</div>
-                    )}
                   </div>
                   <input
                     type="number" min="0" max={tricks}
@@ -1683,27 +1663,27 @@ function Judgement({ t, onBack }) {
         {subPhase === "results" && (
           <div style={{ background: t.rummyCard, border: `1px solid ${t.rummyTableBorder}`, borderRadius: "14px", overflow: "hidden" }}>
             <div style={{ padding: "14px 16px", borderBottom: `1px solid ${t.rummyTableBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700, color: t.text, fontSize: "16px" }}>Tricks Won</div>
-              <div style={{ fontSize: "12px", color: t.rummyMuted }}>Must total {tricks}</div>
+              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700, color: t.text, fontSize: "16px" }}>Results</div>
+              <div style={{ fontSize: "12px", color: t.rummyMuted }}>{hitInputs.filter(v => v !== null).length} / {state.playerCount} marked</div>
             </div>
             {state.names.slice(0, state.playerCount).map((name, i) => {
               const bid = state.bids[i];
+              const hit = hitInputs[i];
+              const score = hit === null ? null : calcJudgementScore(bid, hit ? bid : (bid === 0 ? 1 : 0));
               return (
-                <div key={i} style={{ padding: "12px 16px", borderTop: i === 0 ? "none" : `1px solid ${t.rummyTableBorder}`, display: "flex", alignItems: "center", gap: "12px" }}>
+                <div key={i} style={{ padding: "12px 16px", borderTop: i === 0 ? "none" : `1px solid ${t.rummyTableBorder}`, display: "flex", alignItems: "center", gap: "10px" }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, color: t.text, fontSize: "14px" }}>{name}</div>
-                    <div style={{ fontSize: "12px", color: t.rummyMuted }}>Bid: {bid}</div>
+                    <div style={{ fontSize: "12px", color: t.rummyMuted }}>Bid: {bid}{score !== null && <span style={{ marginLeft: 8, fontWeight: 700, color: score >= 0 ? t.rummyAccent : t.rummyDanger }}>{score > 0 ? `+${score}` : score}</span>}</div>
                   </div>
-                  <input
-                    type="number" min="0" max={tricks}
-                    value={trickInputs[i] ?? ""}
-                    onChange={e => {
-                      const vals = [...trickInputs];
-                      vals[i] = e.target.value;
-                      setTrickInputs(vals);
-                    }}
-                    style={inputStyle}
-                  />
+                  <button onClick={() => { const v = [...hitInputs]; v[i] = true; setHitInputs(v); }}
+                    style={{ padding: "8px 14px", borderRadius: "20px", border: `2px solid ${hit === true ? t.successBorder : t.rummyTableBorder}`, background: hit === true ? t.successBg : t.rummyBg, color: hit === true ? t.successText : t.rummyMuted, fontWeight: 700, fontSize: "13px", cursor: "pointer", fontFamily: "inherit" }}>
+                    ✓ Hit
+                  </button>
+                  <button onClick={() => { const v = [...hitInputs]; v[i] = false; setHitInputs(v); }}
+                    style={{ padding: "8px 14px", borderRadius: "20px", border: `2px solid ${hit === false ? t.rummyDanger : t.rummyTableBorder}`, background: hit === false ? "#fde8e8" : t.rummyBg, color: hit === false ? t.rummyDanger : t.rummyMuted, fontWeight: 700, fontSize: "13px", cursor: "pointer", fontFamily: "inherit" }}>
+                    ✗ Bust
+                  </button>
                 </div>
               );
             })}
