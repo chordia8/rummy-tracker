@@ -1322,21 +1322,27 @@ function HomeScreen({ t, onNavigate }) {
 
 // ─── JUDGEMENT DATA ───────────────────────────────────────────────────────────
 
-const JUDGEMENT_ROUNDS = [
-  { round: 1, cards: 9 },
-  { round: 2, cards: 8 },
-  { round: 3, cards: 7 },
-  { round: 4, cards: 6 },
-  { round: 5, cards: 5 },
-  { round: 6, cards: 4 },
-  { round: 7, cards: 3 },
-  { round: 8, cards: 2 },
-  { round: 9, cards: 1 },
-  { round: 10, cards: 1 },
-];
-
 const JUDGEMENT_STORAGE_KEY = "judgement-state";
 const JUDGEMENT_MAX_PLAYERS = 15;
+
+function buildJudgementRounds({ maxCards, direction, roundsAtOne }) {
+  const r1 = Math.max(1, roundsAtOne || 1);
+  let seq = [];
+  if (direction === "down") {
+    for (let c = maxCards; c > 1; c--) seq.push(c);
+    for (let i = 0; i < r1; i++) seq.push(1);
+  } else if (direction === "up") {
+    for (let i = 0; i < r1; i++) seq.push(1);
+    for (let c = 2; c <= maxCards; c++) seq.push(c);
+  } else {
+    // down-then-up (mountain)
+    for (let c = maxCards; c > 1; c--) seq.push(c);
+    for (let i = 0; i < r1; i++) seq.push(1);
+    for (let c = 2; c <= maxCards; c++) seq.push(c);
+  }
+  return seq.map((cards, i) => ({ round: i + 1, cards }));
+}
+
 const defaultJudgementState = () => ({
   phase: "setup",
   playerCount: 4,
@@ -1345,6 +1351,7 @@ const defaultJudgementState = () => ({
   currentRound: 0,
   bids: [],
   results: [],
+  roundConfig: { maxCards: 9, direction: "down", roundsAtOne: 2 },
 });
 function loadJudgementState() {
   try {
@@ -1364,10 +1371,12 @@ function Judgement({ t, onBack }) {
   const [state, setState] = useState(loadJudgementState);
   const [showRules, setShowRules] = useState(false);
   const [showRestart, setShowRestart] = useState(false);
-  // bidding phase: collect all bids, then collect all trick results
   const [bidInputs, setBidInputs] = useState([]);
   const [hitInputs, setHitInputs] = useState([]); // null | true | false per player
   const [subPhase, setSubPhase] = useState("bidding"); // "bidding" | "results"
+
+  const roundConfig = state.roundConfig || { maxCards: 9, direction: "down", roundsAtOne: 2 };
+  const ROUNDS = buildJudgementRounds(roundConfig);
 
   useEffect(() => {
     localStorage.setItem(JUDGEMENT_STORAGE_KEY, JSON.stringify(state));
@@ -1397,17 +1406,16 @@ function Judgement({ t, onBack }) {
     const fresh = defaultJudgementState();
     fresh.playerCount = state.playerCount;
     fresh.names = state.names.slice(0, state.playerCount);
+    fresh.roundConfig = state.roundConfig;
     setState(fresh);
     setShowRestart(false);
   };
 
-  const round = JUDGEMENT_ROUNDS[state.currentRound];
+  const round = ROUNDS[state.currentRound];
   const tricks = round?.cards ?? 0;
 
   const handleSubmitBids = () => {
-    // Validate all filled
-    const parsed = bidInputs.map(v => parseInt(v));
-    if (parsed.some(isNaN)) { alert("Please enter a bid for every player."); return; }
+    const parsed = bidInputs.map(v => { const n = parseInt(v); return isNaN(n) ? 0 : n; });
     if (parsed.some(b => b < 0)) { alert("Bids cannot be negative."); return; }
     setState(s => ({ ...s, bids: parsed }));
     setSubPhase("results");
@@ -1421,7 +1429,7 @@ function Judgement({ t, onBack }) {
       return calcJudgementScore(bid, hit ? bid : (bid === 0 ? 1 : 0));
     });
     const newScores = state.scores.map((arr, i) => [...arr, roundScores[i]]);
-    const isLast = state.currentRound === JUDGEMENT_ROUNDS.length - 1;
+    const isLast = state.currentRound === ROUNDS.length - 1;
     setState(s => ({
       ...s,
       scores: newScores,
@@ -1461,6 +1469,52 @@ function Judgement({ t, onBack }) {
           </div>
         </div>
         <div style={{ padding: "28px 20px", maxWidth: "480px", margin: "0 auto" }}>
+
+          {/* Round structure config */}
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "18px", fontWeight: 700, color: t.text, marginBottom: "12px" }}>Max Cards in Hand</div>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
+            {[1,2,3,4,5,6,7,8,9,10,11,12,13].map(n => (
+              <button key={n} onClick={() => setState(s => ({ ...s, roundConfig: { ...roundConfig, maxCards: n } }))}
+                style={{ width: "40px", height: "40px", borderRadius: "50%", border: `2px solid ${roundConfig.maxCards === n ? t.rummyAccent : t.inputBorder}`, background: roundConfig.maxCards === n ? t.rummyAccent : t.inputBg, color: roundConfig.maxCards === n ? "#fff" : t.text, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                {n}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "18px", fontWeight: 700, color: t.text, marginBottom: "12px" }}>Direction</div>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+            {[{ val: "down", label: "↓ Down only" }, { val: "up", label: "↑ Up only" }, { val: "mountain", label: "↓↑ Down then up" }].map(({ val, label }) => (
+              <button key={val} onClick={() => setState(s => ({ ...s, roundConfig: { ...roundConfig, direction: val } }))}
+                style={{ flex: 1, padding: "10px 6px", borderRadius: "10px", border: `2px solid ${roundConfig.direction === val ? t.rummyAccent : t.inputBorder}`, background: roundConfig.direction === val ? t.rummyAccent : t.inputBg, color: roundConfig.direction === val ? "#fff" : t.text, fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", lineHeight: 1.3 }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {roundConfig.maxCards > 1 && (
+            <>
+              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "18px", fontWeight: 700, color: t.text, marginBottom: "12px" }}>Rounds at 1 Card</div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
+                {[1,2,3,4,5].map(n => (
+                  <button key={n} onClick={() => setState(s => ({ ...s, roundConfig: { ...roundConfig, roundsAtOne: n } }))}
+                    style={{ width: "40px", height: "40px", borderRadius: "50%", border: `2px solid ${roundConfig.roundsAtOne === n ? t.rummyAccent : t.inputBorder}`, background: roundConfig.roundsAtOne === n ? t.rummyAccent : t.inputBg, color: roundConfig.roundsAtOne === n ? "#fff" : t.text, fontSize: "14px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Round preview */}
+          <div style={{ background: t.bgAlt, border: `1px solid ${t.inputBorder}`, borderRadius: "12px", padding: "12px 14px", marginBottom: "24px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, color: t.rummyAccent, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "8px" }}>Round Preview — {buildJudgementRounds(roundConfig).length} rounds</div>
+            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+              {buildJudgementRounds(roundConfig).map((r, i) => (
+                <div key={i} style={{ width: "26px", height: "26px", borderRadius: "50%", background: t.rummyCard, border: `1px solid ${t.inputBorder}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 700, color: t.rummyMuted }}>{r.cards}</div>
+              ))}
+            </div>
+          </div>
+
           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "18px", fontWeight: 700, color: t.text, marginBottom: "12px" }}>Number of Players</div>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "24px" }}>
             {[2,3,4,5,6,7,8,9,10,11,12,13,14,15].map(n => (
@@ -1535,11 +1589,23 @@ function Judgement({ t, onBack }) {
   }
 
   // ── Playing screen ──
+  const TRUMP_CYCLE = [
+    { suit: "Spades",   symbol: "♠", color: "#e8dfc8" },
+    { suit: "Hearts",   symbol: "♥", color: "#e87070" },
+    { suit: "Clubs",    symbol: "♣", color: "#e8dfc8" },
+    { suit: "Diamonds", symbol: "♦", color: "#e87070" },
+    { suit: "No Trump", symbol: "∅", color: "#6b7a99" },
+  ];
+  const getTrump = (roundIndex) => TRUMP_CYCLE[roundIndex % 5];
+  const currentTrump = getTrump(state.currentRound);
+
+  const totalRounds = ROUNDS.length;
   const JUDGEMENT_RULES = [
     { title: "Objective", text: "Predict exactly how many tricks you'll win each round. Score points only if you hit your bid exactly." },
-    { title: "Rounds", text: "10 rounds total: 9 cards → 8 → 7 → 6 → 5 → 4 → 3 → 2 → 1 → 1. The number of cards dealt = tricks available that round." },
-    { title: "Trump", text: "After dealing, flip the next card to determine trump suit for the round." },
-    { title: "Scoring", text: "Bid 0, make 0 → +5. Bid 0, miss → −5. Bid N (≥1), hit exactly → +10×N. Bid N (≥1), miss → −10×N." },
+    { title: "Round Structure", text: `The number of cards dealt per round is configured before the game starts. Each round, one player leads a trick; others must follow suit if able. Highest trump wins; if no trump played, highest card of the led suit wins.` },
+    { title: "Bidding", text: "All players reveal their bid simultaneously (fist down, fingers up). There is no restriction on the total bids — they can equal the number of tricks available." },
+    { title: "Trump", text: "Trump rotates on a fixed 5-round cycle: ♠ Spades → ♥ Hearts → ♣ Clubs → ♦ Diamonds → ∅ No Trump, then repeats. So rounds 1, 6, 11... are Spades; rounds 5, 10, 15... are No Trump." },
+    { title: "Scoring", text: "Bid 0 and make 0 → +5. Bid 0 and miss → −5. Bid N (≥1) and hit exactly → +10×N. Bid N (≥1) and miss → −10×N. Only an exact hit scores — overbidding and underbidding both lose the same amount." },
   ];
 
   return (
@@ -1549,8 +1615,11 @@ function Judgement({ t, onBack }) {
         <div style={{ padding: "16px 24px 12px", textAlign: "center", position: "relative" }}>
           <button onClick={onBack} style={{ position: "absolute", left: 16, top: 16, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "8px", color: "#fff", fontSize: "20px", cursor: "pointer", padding: "6px 12px" }}>←</button>
           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "20px", fontWeight: 900, color: t.rummyHeaderText }}>Judgement</div>
-          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: "12px", marginTop: "2px" }}>
-            Round {state.currentRound + 1} of {JUDGEMENT_ROUNDS.length} · {tricks} card{tricks !== 1 ? "s" : ""} dealt
+          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: "12px", marginTop: "2px", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+            <span>Round {state.currentRound + 1} of {ROUNDS.length} · {tricks} card{tricks !== 1 ? "s" : ""} dealt</span>
+            <span style={{ background: "rgba(255,255,255,0.15)", borderRadius: "20px", padding: "2px 10px", fontWeight: 700, fontSize: "13px", color: currentTrump.color, letterSpacing: "0.02em" }}>
+              {currentTrump.symbol} {currentTrump.suit}
+            </span>
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "center", paddingBottom: "14px", gap: "10px" }}>
@@ -1573,7 +1642,7 @@ function Judgement({ t, onBack }) {
 
         {/* Round progress pills */}
         <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginBottom: "20px", justifyContent: "center" }}>
-          {JUDGEMENT_ROUNDS.map((r, i) => {
+          {ROUNDS.map((r, i) => {
             const done = i < state.currentRound;
             const active = i === state.currentRound;
             return (
@@ -1590,37 +1659,62 @@ function Judgement({ t, onBack }) {
         </div>
 
         {/* Scoreboard */}
-        {state.scores[0]?.length > 0 && (
-          <div style={{ background: t.rummyCard, border: `1px solid ${t.rummyTableBorder}`, borderRadius: "14px", marginBottom: "20px", overflow: "hidden" }}>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                <thead>
-                  <tr style={{ background: t.rummyBg }}>
-                    <th style={{ padding: "10px 12px", textAlign: "left", color: t.rummyMuted, fontWeight: 600, whiteSpace: "nowrap" }}>Player</th>
-                    {state.scores[0].map((_, ri) => (
-                      <th key={ri} style={{ padding: "10px 8px", textAlign: "center", color: t.rummyMuted, fontWeight: 600 }}>R{ri + 1}</th>
-                    ))}
-                    <th style={{ padding: "10px 8px", textAlign: "center", color: t.rummyAccent, fontWeight: 700 }}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {state.names.slice(0, state.playerCount)
-                    .map((name, pi) => ({ name, pi, total: totals[pi], scores: state.scores[pi] }))
-                    .sort((a, b) => b.total - a.total)
-                    .map(({ name, pi, total, scores }) => (
-                    <tr key={pi} style={{ borderTop: `1px solid ${t.rummyTableBorder}` }}>
-                      <td style={{ padding: "9px 12px", color: t.text, fontWeight: 600, whiteSpace: "nowrap" }}>{name}</td>
-                      {scores.map((sc, ri) => (
-                        <td key={ri} style={{ padding: "9px 8px", textAlign: "center", color: sc >= 0 ? t.rummyAccent : t.rummyDanger, fontWeight: 600 }}>{sc > 0 ? `+${sc}` : sc}</td>
+        {state.scores[0]?.length > 0 && (() => {
+          const sorted = state.names.slice(0, state.playerCount)
+            .map((name, pi) => ({ name, pi, total: totals[pi], scores: state.scores[pi] }))
+            .sort((a, b) => b.total - a.total);
+          // Compute rank movement: compare rank this round vs previous round
+          const prevTotals = sorted.map(({ scores }) => scores.slice(0, -1).reduce((a, b) => a + b, 0));
+          const prevRanked = [...sorted].sort((a, b) => {
+            const ai = sorted.indexOf(a), bi = sorted.indexOf(b);
+            return prevTotals[bi] - prevTotals[ai];
+          }).map(p => p.pi);
+          const currRanked = sorted.map(p => p.pi);
+          return (
+            <div style={{ background: t.rummyCard, border: `1px solid ${t.rummyTableBorder}`, borderRadius: "14px", marginBottom: "20px", overflow: "hidden" }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ borderCollapse: "collapse", fontSize: "13px", tableLayout: "auto" }}>
+                  <thead>
+                    <tr style={{ background: t.rummyBg }}>
+                      <th style={{ padding: "10px 12px", textAlign: "left", color: t.rummyMuted, fontWeight: 600, whiteSpace: "nowrap", position: "sticky", left: 0, background: t.rummyBg, zIndex: 2, minWidth: "90px" }}>Player</th>
+                      {state.scores[0].map((_, ri) => (
+                        <th key={ri} style={{ padding: "10px 8px", textAlign: "center", color: t.rummyMuted, fontWeight: 600, whiteSpace: "nowrap" }}>R{ri + 1}</th>
                       ))}
-                      <td style={{ padding: "9px 8px", textAlign: "center", fontWeight: 800, color: total >= 0 ? t.rummyAccent : t.rummyDanger }}>{total > 0 ? `+${total}` : total}</td>
+                      <th style={{ padding: "10px 8px", textAlign: "center", color: t.rummyAccent, fontWeight: 700, whiteSpace: "nowrap" }}>Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {sorted.map(({ name, pi, total, scores }, rank) => {
+                      const prevRank = prevRanked.indexOf(pi);
+                      const moved = scores.length > 1 ? prevRank - rank : null;
+                      return (
+                        <tr key={pi} style={{ borderTop: `1px solid ${t.rummyTableBorder}` }}>
+                          <td style={{ padding: "9px 12px", color: t.text, fontWeight: 600, whiteSpace: "nowrap", position: "sticky", left: 0, background: t.rummyCard, zIndex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span>{name}</span>
+                              {moved !== null && moved !== 0 && (
+                                <span style={{ fontSize: "11px", fontWeight: 700, color: moved > 0 ? t.successBorder : t.rummyDanger }}>
+                                  {moved > 0 ? `▲${moved}` : `▼${Math.abs(moved)}`}
+                                </span>
+                              )}
+                              {moved === 0 && scores.length > 1 && (
+                                <span style={{ fontSize: "11px", color: t.rummyMuted }}>–</span>
+                              )}
+                            </div>
+                          </td>
+                          {scores.map((sc, ri) => (
+                            <td key={ri} style={{ padding: "9px 8px", textAlign: "center", color: sc >= 0 ? t.rummyAccent : t.rummyDanger, fontWeight: 600 }}>{sc > 0 ? `+${sc}` : sc}</td>
+                          ))}
+                          <td style={{ padding: "9px 8px", textAlign: "center", fontWeight: 800, color: total >= 0 ? t.rummyAccent : t.rummyDanger, whiteSpace: "nowrap" }}>{total > 0 ? `+${total}` : total}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Bidding phase */}
         {subPhase === "bidding" && (
@@ -1659,7 +1753,6 @@ function Judgement({ t, onBack }) {
                 if (state.currentRound === 0) {
                   setState(s => ({ ...s, phase: "setup", bids: [] }));
                 } else {
-                  const newScores = state.scores.map(arr => arr.slice(0, -0).slice(0, arr.length));
                   setState(s => ({ ...s, currentRound: s.currentRound - 1, bids: [], scores: s.scores.map(arr => arr.slice(0, s.currentRound - 1)) }));
                 }
                 setBidInputs(Array(state.playerCount).fill(""));
@@ -1710,7 +1803,7 @@ function Judgement({ t, onBack }) {
                 ← Back
               </button>
               <button onClick={handleSubmitResults} style={{ flex: 1, padding: "13px", background: t.rummyAccent, border: "none", borderRadius: "10px", color: "#fff", fontSize: "15px", fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
-                {state.currentRound === JUDGEMENT_ROUNDS.length - 1 ? "Finish Game" : "Next Round →"}
+                {state.currentRound === ROUNDS.length - 1 ? "Finish Game" : "Next Round →"}
               </button>
             </div>
           </div>
