@@ -228,6 +228,64 @@ RECIPES["panini"] = {
   ],
 };
 
+RECIPES["enchiladas"] = {
+  title: "Bean & Cheese Enchiladas",
+  emoji: "🌯",
+  subtitle: "with Homemade Guacamole",
+  stats: [["⏱", "~35 min"], ["🍽", "2–4 servings"], ["💪", "~20g protein"]],
+  overview: [
+    { step: "Gather", summary: "Collect all ingredients and equipment before starting." },
+    { step: "Beans", summary: "Cook pinto beans + frozen beans with taco seasoning, salt, pepper — mash down until thick like refried beans." },
+    { step: "Assemble", summary: "Fill tortillas with beans and Mexican cheese, roll up, then top with enchilada sauce." },
+    { step: "Guac", summary: "Mash avocado with tomato and a squeeze of lemon." },
+    { step: "Lemon", summary: "Slice the leftover lemon and store in the fridge for next time." },
+    { step: "Serve", summary: "Serve with chips, salsas, and Taco Bell hot sauce." },
+  ],
+  steps: [
+    {
+      id: 0, title: "Gather everything", duration: null,
+      instruction: "Before you start, get all of this ready:",
+      gather: {
+        ingredients: [
+          "3 cans pinto beans", "Frozen beans (container next to the cans)",
+          "Taco seasoning", "Salt and pepper", "Tortillas",
+          "Mexican shredded cheese (not mozzarella)",
+          "Enchilada sauce (finish the jar in the fridge, backup jar in pantry)",
+          "Avocado(s)", "Tomato", "Lemon",
+          "Tortilla chips", "Salsas (fridge)", "Taco Bell hot sauce",
+        ],
+        equipment: [
+          "Large pot", "Wooden spoon or spatula (for mashing)",
+          "Cutting board + knife", "Small bowl (for guac)", "Tupperware (for leftover lemon)",
+        ],
+      },
+    },
+    {
+      id: 1, title: "Cook the beans", duration: 15 * 60,
+      instruction: "Pour all 3 cans of pinto beans into a large pot along with the frozen beans from the container next to the cans. Cook over medium heat, pressing down on the beans with your spoon as they cook so they mash and turn more like refried beans. Stir in a good amount of taco seasoning plus a bit of salt and pepper. Keep cooking and mashing until most of the liquid is gone.",
+      tip: "The more you press and mash, the more they'll feel like real refried beans.",
+    },
+    {
+      id: 2, title: "Assemble the enchiladas", duration: null,
+      instruction: "Lay out a tortilla, add a good amount of beans and Mexican cheese, and wrap it up. Repeat for however many you and bhaiya want. Pour enchilada sauce over the top — finish the opened jar in the fridge first, then open the new one from the pantry if you need more.",
+      tip: "Use the Mexican cheese blend in the fridge, not mozzarella.",
+    },
+    {
+      id: 3, title: "Make the guacamole", duration: null,
+      instruction: "Mash the avocado from the counter with chopped tomato and a squeeze of lemon until it's the consistency you like.",
+    },
+    {
+      id: 4, title: "Save the extra lemon", duration: null,
+      instruction: "Cut whatever's left of the lemon into slices and put them in a Tupperware in the fridge for next time.",
+    },
+    {
+      id: 5, title: "Serve", duration: null,
+      instruction: "Serve the enchiladas and guac with chips from the pantry, salsas from the fridge, and Taco Bell hot sauce on the side.",
+      tip: "I love uuuu 💛",
+    },
+  ],
+};
+
 // ─── RUMMY DATA ───────────────────────────────────────────────────────────────
 
 const CONTRACTS = [
@@ -1294,6 +1352,7 @@ function HomeScreen({ t, onNavigate }) {
                 <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>🥔 Gnocchi</span>
                 <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>🥗 Tempeh Bowl</span>
                 <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>🥪 Panini</span>
+                <span style={{ fontSize: "11px", background: t.bgAlt, border: `1px solid ${t.border}`, borderRadius: "20px", padding: "3px 10px", color: t.textBody }}>🌯 Enchiladas</span>
               </div>
             </div>
             <div style={{ fontSize: "22px", color: t.textMuted }}>›</div>
@@ -1915,6 +1974,14 @@ function RecipesHub({ t, onBack, onSelectRecipe }) {
           </div>
           <div style={{ fontSize: "22px", color: t.textMuted }}>›</div>
         </div>
+        <div onClick={() => onSelectRecipe("enchiladas")} style={{ marginTop: "12px", background: t.bgCard, border: `2px solid ${t.border}`, borderRadius: "16px", padding: "22px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: "16px", boxShadow: t.cardShadow }}>
+          <div style={{ fontSize: "36px" }}>🌯</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "18px", fontWeight: 700, color: t.text }}>Bean & Cheese Enchiladas</div>
+            <div style={{ fontSize: "13px", color: t.textMuted, marginTop: "2px" }}>~35 min · 2–4 servings · ~20g protein</div>
+          </div>
+          <div style={{ fontSize: "22px", color: t.textMuted }}>›</div>
+        </div>
       </div>
     </div>
   );
@@ -1950,6 +2017,7 @@ export default function App() {
       {screen === "recipe-gnocchi" && <RecipeView t={t} onBack={() => setScreen("recipes")} recipe={RECIPES["gnocchi"]} />}
       {screen === "recipe-tempeh-bowl" && <RecipeView t={t} onBack={() => setScreen("recipes")} recipe={RECIPES["tempeh-bowl"]} />}
       {screen === "recipe-panini" && <RecipeView t={t} onBack={() => setScreen("recipes")} recipe={RECIPES["panini"]} />}
+      {screen === "recipe-enchiladas" && <RecipeView t={t} onBack={() => setScreen("recipes")} recipe={RECIPES["enchiladas"]} />}
       {screen === "games" && <GamesHub t={t} onBack={() => setScreen("home")} onSelectGame={id => setScreen(`game-${id}`)} />}
       {screen === "game-rummy" && <LiverpoolRummy t={t} onBack={() => setScreen("games")} />}
       {screen === "game-cabo" && <Cabo t={t} onBack={() => setScreen("games")} />}
